@@ -1,0 +1,12 @@
+{
+  "name": "pydataglobal_2022",
+  "description": "PyData Global 2022 Talk: PyScript and Data Science, a love story",
+  "type": "app",
+  "author_name": "Fabio Pliger",
+  "author_email": "fabio@anaconda.com",
+  "version": "2022.1.1",
+  "project_id": "b34856fd-2631-48ee-b650-61f8a17a537a",
+  "user_id": "5ecfc6d3-d6f6-4c4c-b5ff-7dfd5e69fa38",
+  "created_at": "2022-12-01T22:14:51.450586+00:00",
+  "updated_at": "2022-12-01T22:14:51.450586+00:00"
+}
