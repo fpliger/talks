@@ -1,0 +1,3 @@
+name = "TALKS - PyCon IT 2025"
+[[fetch]]
+files = [ "pyreveal.py", "slides.md",]
