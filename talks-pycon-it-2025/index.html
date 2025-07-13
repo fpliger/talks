@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Follow the white PyScript Bunny</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+    <!-- <link rel="stylesheet" href="/pyscript-offline/public/reveal/reset.css" integrity="sha512-Mjxkx+r7O/OLQeKeIBCQ2yspG1P5muhAtv/J+p2/aPnSenciZWm5Wlnt+NOUNA4SHbnBIE/R2ic0ZBiCXdQNUg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="/pyscript-offline/public/reveal/reveal.css" integrity="sha512-USp+nLNMZ1hR0Ll/LpYDxIq47Ypcm3KfjIleOnyFrB1N5KfHLXjfPQD1wQlhv7kVHRRgPvNVtendDS72LyHviA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="/pyscript-offline/public/reveal/theme/white.css" integrity="sha512-RoEy1xOWgzryoplQ1g0eNHizP2BRqEq8eLGpRyI6OvM2FvmxpUyiPotvW4rp/I67VN6eFq4DDXQNcFKbNZ5Rrg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="/pyscript-offline/public/reveal/reveal.js" integrity="sha512-OQrqDw7qMufeGwkeHX+IVYOjaMJukqKTnuy3xBAMXE0pOtcFrJRFYlt4eJOLT/XJr7yh6DW8N9RrF2t5Aqsy7w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="/pyscript-offline/public/reveal/plugin/markdown/markdown.js" integrity="sha512-yov8LabSFTQgFrb/4/hhVYXR2zdZRXiMPj2M/gGPPBBpHdbMDDzKXnOcuiAYsXEsmpKucbl8qadb7Fp3nh5kqA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="/pyscript-offline/public/reveal/plugin/highlight/highlight.esm.js" integrity="sha512-ziVZbr2bsvVwqosSHccw9ptK+vGXfj8QprK7NM0MGUv7Iz73kstPVVw+cXigqfWts09/QFyGfSCSXwvYfcNIZg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="/pyscript-offline/public/reveal/plugin/highlight/highlight.js" integrity="sha512-RCedMo/DOyawQOh4zYtqEHTZAfgrrVQctN3LVCX5kELGsN52TOdwZ8inRY0l9Mo4vtyDFn6oOAgRUilWXgb+wA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="/pyscript-offline/public/reveal/plugin/highlight/monokai.css" integrity="sha512-z8wQkuDRFwCBfoj7KOiu1MECaRVoXx6rZQWL21x0BsVVH7JkqCp1Otf39qve6CrCycOOL5o9vgfII5Smds23rg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="/pyscript-offline/public/reveal/plugin/highlight/plugin.js" integrity="sha512-etJ8lWhRgrra7vOA1L/3qJqlsH6aogJS4Joq8+iLMV7mQfQShEbdya8gkHkT8BZIUWyzRbi7T+bz948zfN7cZg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script> -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reset.min.css" integrity="sha512-Mjxkx+r7O/OLQeKeIBCQ2yspG1P5muhAtv/J+p2/aPnSenciZWm5Wlnt+NOUNA4SHbnBIE/R2ic0ZBiCXdQNUg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css" integrity="sha512-USp+nLNMZ1hR0Ll/LpYDxIq47Ypcm3KfjIleOnyFrB1N5KfHLXjfPQD1wQlhv7kVHRRgPvNVtendDS72LyHviA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/white.min.css" integrity="sha512-RoEy1xOWgzryoplQ1g0eNHizP2BRqEq8eLGpRyI6OvM2FvmxpUyiPotvW4rp/I67VN6eFq4DDXQNcFKbNZ5Rrg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js" integrity="sha512-OQrqDw7qMufeGwkeHX+IVYOjaMJukqKTnuy3xBAMXE0pOtcFrJRFYlt4eJOLT/XJr7yh6DW8N9RrF2t5Aqsy7w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/markdown/markdown.min.js" integrity="sha512-yov8LabSFTQgFrb/4/hhVYXR2zdZRXiMPj2M/gGPPBBpHdbMDDzKXnOcuiAYsXEsmpKucbl8qadb7Fp3nh5kqA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.esm.min.js" integrity="sha512-ziVZbr2bsvVwqosSHccw9ptK+vGXfj8QprK7NM0MGUv7Iz73kstPVVw+cXigqfWts09/QFyGfSCSXwvYfcNIZg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js" integrity="sha512-RCedMo/DOyawQOh4zYtqEHTZAfgrrVQctN3LVCX5kELGsN52TOdwZ8inRY0l9Mo4vtyDFn6oOAgRUilWXgb+wA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/monokai.min.css" integrity="sha512-z8wQkuDRFwCBfoj7KOiu1MECaRVoXx6rZQWL21x0BsVVH7JkqCp1Otf39qve6CrCycOOL5o9vgfII5Smds23rg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/plugin.min.js" integrity="sha512-etJ8lWhRgrra7vOA1L/3qJqlsH6aogJS4Joq8+iLMV7mQfQShEbdya8gkHkT8BZIUWyzRbi7T+bz948zfN7cZg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.9.1/core.css">
+      <script type="module" src="https://pyscript.net/releases/2024.9.1/core.js"></script>
+    <!-- <link rel="stylesheet" href="/pyscript-offline/public/pyscript/core.css">
+      <script type="module" src="/pyscript-offline/public/pyscript/core.js"></script> -->
+    <link rel="stylesheet" href="./talk.css">
+    <style>
+        mpy-editor {
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <script type="mpy" src="./main.py" config="./pyscript.toml" async></script>
+</body>
+</html>
