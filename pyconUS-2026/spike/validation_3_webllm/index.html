@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Validation 3: WebLLM via JS Interop</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+
+    <link rel="stylesheet" href="https://pyscript.net/releases/2026.2.1/core.css">
+    <script type="module" src="https://pyscript.net/releases/2026.2.1/core.js"></script>
+
+    <!-- WebLLM -->
+    <script type="module">
+        import * as webllm from "https://esm.run/@mlc-ai/web-llm";
+        window.webllm = webllm;
+        window.webllmLoaded = true;
+        // Log available models
+        if (webllm.prebuiltAppConfig && webllm.prebuiltAppConfig.model_list) {
+            const models = webllm.prebuiltAppConfig.model_list.map(m => m.model_id);
+            console.log("WebLLM available models:", models.slice(0, 10));
+            window.webllmModels = models;
+        }
+        console.log("WebLLM loaded:", Object.keys(webllm));
+    </script>
+
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+        .result { padding: 1rem; margin: 1rem 0; border-radius: 4px; }
+        .pass { background: #d4edda; border: 1px solid #c3e6cb; }
+        .fail { background: #f8d7da; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; border: 1px solid #bee5eb; }
+        .warning { background: #fff3cd; border: 1px solid #ffeeba; }
+        pre { background: #f4f4f4; padding: 1rem; overflow-x: auto; }
+        h1 { color: #333; }
+        button { padding: 0.5rem 1rem; margin: 0.25rem; cursor: pointer; }
+        #progress { margin: 1rem 0; }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #007bff;
+            transition: width 0.3s;
+        }
+        #model-output {
+            min-height: 100px;
+            border: 2px solid #28a745;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Validation 3: WebLLM via JS Interop</h1>
+
+    <p><strong>Goal:</strong> Confirm local model loads, generates, and round-trip is fast enough for live demo.</p>
+
+    <div class="warning result">
+        <strong>Note:</strong> First run downloads the model (~500MB for SmolLM). Subsequent runs use cached model.
+    </div>
+
+    <div>
+        <button id="test-webllm" py-click="test_webllm_load">Test 1: Load WebLLM Model</button>
+        <button id="test-generate" py-click="test_generate" disabled>Test 2: Generate Text</button>
+        <button id="test-full" py-click="run_full_test">Run Full Test</button>
+    </div>
+
+    <div id="progress">
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width: 0%"></div></div>
+        <div id="progress-text">Ready</div>
+    </div>
+
+    <div id="model-output">Model output will appear here...</div>
+
+    <div id="output"></div>
+
+    <script type="py" config="./pyscript.toml">
+import json
+import time
+import asyncio
+from pyscript import document, window
+
+# Global engine reference
+engine = None
+
+def log(message, css_class="info"):
+    output = document.getElementById("output")
+    div = document.createElement("div")
+    div.className = f"result {css_class}"
+    div.innerHTML = message
+    output.appendChild(div)
+    print(f"[{css_class}] {message[:100]}...")
+
+def update_progress(percent, text):
+    document.getElementById("progress-fill").style.width = f"{percent}%"
+    document.getElementById("progress-text").textContent = text
+
+def set_model_output(text):
+    document.getElementById("model-output").textContent = text
+
+async def test_webllm_load(event=None):
+    """Test 1: Load a small WebLLM model."""
+    global engine
+
+    log("<strong>Test 1: Loading WebLLM Model</strong>...")
+    update_progress(0, "Initializing WebLLM...")
+
+    try:
+        # Check if WebLLM is loaded
+        if not hasattr(window, 'webllm') or not window.webllmLoaded:
+            await asyncio.sleep(1)
+            if not hasattr(window, 'webllm'):
+                raise Exception("WebLLM not loaded - check browser console")
+
+        webllm = window.webllm
+        start_time = time.time()
+
+        # List available models and pick smallest
+        if hasattr(window, 'webllmModels'):
+            models = list(window.webllmModels)
+            log(f"Available models (first 5): {models[:5]}", "info")
+
+            # Try to find a small model - prefer Smol, Phi, or Qwen small variants
+            small_models = [m for m in models if any(x in m.lower() for x in ['smol', 'tiny', '0.5b', '1b', 'phi-3'])]
+            if small_models:
+                model_id = small_models[0]
+            else:
+                # Fall back to first model
+                model_id = models[0] if models else "Llama-3.2-1B-Instruct-q4f16_1-MLC"
+        else:
+            # Fallback to known working model
+            model_id = "Llama-3.2-1B-Instruct-q4f16_1-MLC"
+
+        log(f"Selected model: {model_id}", "info")
+
+        # Create progress callback
+        def init_progress_callback(progress):
+            pct = int(progress.progress * 100) if hasattr(progress, 'progress') else 0
+            text = str(progress.text) if hasattr(progress, 'text') else "Loading..."
+            update_progress(pct, text)
+            print(f"Progress: {pct}% - {text}")
+
+        # Create engine with progress callback
+        update_progress(5, f"Loading {model_id}...")
+        engine = await webllm.CreateMLCEngine(
+            model_id,
+            {"initProgressCallback": init_progress_callback}
+        )
+
+        load_time = time.time() - start_time
+        update_progress(100, f"Model loaded in {load_time:.1f}s")
+
+        log(f"<strong>Model loaded successfully!</strong><br>"
+            f"Model: {model_id}<br>"
+            f"Load time: {load_time:.1f}s", "pass")
+
+        # Enable generate button
+        document.getElementById("test-generate").disabled = False
+
+        return True
+
+    except Exception as e:
+        log(f"WebLLM load failed: <pre>{type(e).__name__}: {e}</pre>", "fail")
+        update_progress(0, "Load failed")
+        return False
+
+async def test_generate(event=None):
+    """Test 2: Generate text with the loaded model."""
+    global engine
+
+    if engine is None:
+        log("Model not loaded. Run Test 1 first.", "fail")
+        return False
+
+    log("<strong>Test 2: Generating Text</strong><br>Sending prompt to local model...")
+    set_model_output("Generating...")
+
+    try:
+        start_time = time.time()
+
+        # Simple prompt for testing
+        messages = [
+            {"role": "user", "content": "What is 2+2? Answer in one word."}
+        ]
+
+        # Non-streaming generation first (simpler)
+        response = await engine.chat.completions.create({
+            "messages": messages,
+            "max_tokens": 32,
+            "temperature": 0.1
+        })
+
+        gen_time = time.time() - start_time
+        content = response.choices[0].message.content
+
+        set_model_output(content)
+
+        # Get stats
+        stats = await engine.runtimeStatsText()
+
+        log(f"<strong>Generation complete!</strong><br>"
+            f"Response: {content}<br>"
+            f"Generation time: {gen_time*1000:.0f}ms<br>"
+            f"Stats: <pre>{stats}</pre>", "pass")
+
+        return gen_time
+
+    except Exception as e:
+        log(f"Generation failed: <pre>{type(e).__name__}: {e}</pre>", "fail")
+        set_model_output(f"Error: {e}")
+        return None
+
+async def run_full_test(event=None):
+    """Run complete WebLLM validation."""
+    log("<strong>Running Full WebLLM Test</strong>", "info")
+
+    # Test 1: Load model
+    load_success = await test_webllm_load()
+    if not load_success:
+        log("Validation 3 FAILED at model load stage", "fail")
+        return
+
+    # Test 2: Generate
+    gen_time = await test_generate()
+    if gen_time is None:
+        log("Validation 3 FAILED at generation stage", "fail")
+        return
+
+    # Test 3: Streaming generation (optional)
+    log("<strong>Test 3: Streaming Generation</strong>", "info")
+    set_model_output("")
+
+    try:
+        start_time = time.time()
+        tokens = []
+
+        messages = [
+            {"role": "user", "content": "Count from 1 to 5."}
+        ]
+
+        # Streaming generation
+        stream = await engine.chat.completions.create({
+            "messages": messages,
+            "max_tokens": 50,
+            "temperature": 0.1,
+            "stream": True
+        })
+
+        first_token_time = None
+        async for chunk in stream:
+            if chunk.choices[0].delta.content:
+                if first_token_time is None:
+                    first_token_time = time.time() - start_time
+                token = chunk.choices[0].delta.content
+                tokens.append(token)
+                # Update output incrementally
+                current = document.getElementById("model-output").textContent
+                document.getElementById("model-output").textContent = current + token
+
+        total_time = time.time() - start_time
+        full_response = "".join(tokens)
+
+        log(f"<strong>Streaming Results:</strong><br>"
+            f"Tokens: {len(tokens)}<br>"
+            f"First token: {first_token_time*1000:.0f}ms<br>"
+            f"Total time: {total_time*1000:.0f}ms<br>"
+            f"Tokens/sec: {len(tokens)/total_time:.1f}", "info")
+
+    except Exception as e:
+        log(f"Streaming test note: {e}", "info")
+
+    # Final verdict
+    if gen_time and gen_time < 5:  # Under 5 seconds is usable for demo
+        log("<strong>VALIDATION 3 PASSED</strong><br>"
+            "WebLLM loads and generates via JS interop from PyScript.<br>"
+            f"Generation latency ({gen_time*1000:.0f}ms) is acceptable for live demo.", "pass")
+    else:
+        log(f"Validation 3 PARTIAL - generation works but may be slow ({gen_time*1000:.0f}ms)", "warning")
+
+log("Ready. Click 'Run Full Test' for complete validation.", "info")
+    </script>
+</body>
+</html>

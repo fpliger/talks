@@ -1,0 +1,10 @@
+# PyScript configuration for Router Demo
+
+[files]
+# Module structure (in dependency order):
+"./config.py" = ""       # Configuration variables
+"./ui.py" = ""           # UI helpers (DOM manipulation)
+"./router.py" = ""       # Routing logic
+"./models.py" = ""       # Model backends (browser, local, remote)
+"./tools.py" = ""        # MCP tool functions
+"./main.py" = ""         # Demo handlers + initialization

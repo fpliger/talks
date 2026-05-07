@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Demo Status - PyCon US 2026</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            background: #f8f9fa;
+            color: #333;
+        }
+        h1 { margin-bottom: 0.25rem; }
+        .subtitle { color: #666; margin-bottom: 2rem; }
+
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            margin-top: 0;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #eee;
+        }
+
+        h3 { margin-top: 1.5rem; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        th { background: #f8f9fa; font-weight: 600; }
+
+        .status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .real { background: #d4edda; color: #155724; }
+        .mock { background: #fff3cd; color: #856404; }
+        .todo { background: #f8d7da; color: #721c24; }
+
+        .model-type {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .model-type.browser { background: #20c997; }
+        .model-type.local { background: #28a745; }
+        .model-type.remote { background: #007bff; }
+
+        .component-name { font-weight: 600; color: #333; }
+        .file-ref { font-family: monospace; font-size: 0.85rem; color: #6c757d; }
+        .action-needed { font-size: 0.9rem; color: #666; }
+
+        .config-box {
+            background: #f4f4f4;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+            white-space: pre;
+        }
+
+        .demo-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 0.5rem 0;
+        }
+
+        .demo-card h4 { margin: 0 0 0.5rem 0; }
+
+        .legend {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .architecture-diagram {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            overflow-x: auto;
+            white-space: pre;
+            line-height: 1.4;
+        }
+
+        footer {
+            text-align: center;
+            color: #999;
+            font-size: 0.85rem;
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>Router Demo Status</h1>
+    <p class="subtitle">PyCon US 2026 — Three-tier model architecture</p>
+
+    <!-- Model Tiers -->
+    <div class="section">
+        <h2>Three Model Tiers</h2>
+        <div class="architecture-diagram">
+┌────────────────────────────────────────────────────────────────────────────┐
+│                              USER'S BROWSER                                 │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │                      PyScript (Python Runtime)                        │  │
+│  │                                                                       │  │
+│  │    ┌─────────┐                                                        │  │
+│  │    │ ROUTER  │─────────────────┬──────────────────┬─────────────────┐│  │
+│  │    └─────────┘                 │                  │                 ││  │
+│  │         │                      │                  │                 ││  │
+│  │         ▼                      ▼                  ▼                 ▼│  │
+│  │  ┌─────────────┐       ┌─────────────┐    ┌─────────────┐   ┌──────┐│  │
+│  │  │  IN-BROWSER │       │    LOCAL    │    │   REMOTE    │   │ MCP  ││  │
+│  │  │   WebLLM    │       │   Server    │    │    API      │   │Tools ││  │
+│  │  │  (WebGPU)   │       │  (Ollama)   │    │  (OpenAI)   │   │      ││  │
+│  │  └─────────────┘       └─────────────┘    └─────────────┘   └──────┘│  │
+│  │         │                      │                  │              │  │  │
+│  └─────────┼──────────────────────┼──────────────────┼──────────────┼──┘  │
+│            │                      │                  │              │     │
+└────────────┼──────────────────────┼──────────────────┼──────────────┼─────┘
+             │                      │                  │              │
+             ▼                      ▼                  ▼              ▼
+     ┌───────────────┐      ┌───────────────┐  ┌───────────────┐ ┌────────┐
+     │  GPU in Tab   │      │  localhost    │  │  Cloud API    │ │  MCP   │
+     │  (WebGPU)     │      │  :11434       │  │  endpoint     │ │ Server │
+     └───────────────┘      └───────────────┘  └───────────────┘ └────────┘
+        </div>
+
+        <table>
+            <tr>
+                <th>Tier</th>
+                <th>Where it runs</th>
+                <th>Examples</th>
+                <th>Pros</th>
+                <th>Cons</th>
+            </tr>
+            <tr>
+                <td><span class="model-type browser">IN-BROWSER</span></td>
+                <td>WebGPU in the tab</td>
+                <td>WebLLM, Transformers.js</td>
+                <td>Private, offline, no server</td>
+                <td>Model download, limited size</td>
+            </tr>
+            <tr>
+                <td><span class="model-type local">LOCAL</span></td>
+                <td>localhost server</td>
+                <td>Ollama, LM Studio, llama.cpp</td>
+                <td>Fast, private, larger models</td>
+                <td>Requires local install</td>
+            </tr>
+            <tr>
+                <td><span class="model-type remote">REMOTE</span></td>
+                <td>Cloud API</td>
+                <td>OpenAI, Anthropic, etc.</td>
+                <td>Most capable, no setup</td>
+                <td>Cost, latency, data leaves device</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- What's Real vs Mocked -->
+    <div class="section">
+        <h2>Implementation Status</h2>
+
+        <div class="legend">
+            <div class="legend-item"><span class="status real">REAL</span> Working implementation</div>
+            <div class="legend-item"><span class="status mock">MOCK</span> Simulated for demo</div>
+        </div>
+
+        <h3>Infrastructure (All Real)</h3>
+        <table>
+            <tr>
+                <td class="component-name">PyScript / Pyodide</td>
+                <td><span class="status real">REAL</span></td>
+                <td>Python runs in browser via WebAssembly</td>
+            </tr>
+            <tr>
+                <td class="component-name">Routing Logic</td>
+                <td><span class="status real">REAL</span></td>
+                <td>Analyzes prompts, decides tier</td>
+            </tr>
+            <tr>
+                <td class="component-name">MCP Tool Discovery</td>
+                <td><span class="status real">REAL</span></td>
+                <td>Lists tools from MCP server</td>
+            </tr>
+            <tr>
+                <td class="component-name">WebLLM JS Interop</td>
+                <td><span class="status real">REAL</span></td>
+                <td>Pattern validated, ready to use</td>
+            </tr>
+        </table>
+
+        <h3>Model Backends</h3>
+        <table>
+            <tr>
+                <th>Backend</th>
+                <th>Status</th>
+                <th>To Make Real</th>
+            </tr>
+            <tr>
+                <td><span class="model-type browser">IN-BROWSER</span> WebLLM</td>
+                <td><span class="status mock">MOCK</span></td>
+                <td>Set <code>USE_MOCK_BROWSER = False</code><br>Downloads ~700MB model on first use</td>
+            </tr>
+            <tr>
+                <td><span class="model-type local">LOCAL</span> Server</td>
+                <td><span class="status mock">MOCK</span></td>
+                <td>Set <code>USE_MOCK_LOCAL = False</code><br>Run Ollama: <code>ollama serve</code></td>
+            </tr>
+            <tr>
+                <td><span class="model-type remote">REMOTE</span> API</td>
+                <td><span class="status mock">MOCK</span></td>
+                <td>Set <code>USE_MOCK_REMOTE = False</code><br>Set <code>REMOTE_API_URL</code> and API key</td>
+            </tr>
+        </table>
+
+        <h3>Current Configuration</h3>
+        <div class="config-box"># router.py - Model backend configuration
+
+USE_MOCK_BROWSER = True    # In-browser model (WebLLM)
+USE_MOCK_LOCAL = True      # Local server model (Ollama, etc.)
+USE_MOCK_REMOTE = True     # Remote API model (OpenAI, etc.)
+
+LOCAL_API_URL = "http://localhost:11434"   # Ollama default
+LOCAL_API_MODEL = "llama3.2"               # Model to use
+REMOTE_API_URL = "http://localhost:8766"   # Mock server
+REMOTE_API_KEY = ""                        # Set for real APIs
+MCP_SERVER_URL = "http://localhost:8765"   # MCP tools</div>
+    </div>
+
+    <!-- Demo Status -->
+    <div class="section">
+        <h2>Demo-by-Demo Status</h2>
+
+        <div class="demo-card">
+            <h4>Demo 1: <span class="model-type browser">IN-BROWSER</span> (Date Conversion)</h4>
+            <p><em>"Convert this date to ISO format: May 5, 2026"</em></p>
+            <table>
+                <tr><td>Routing</td><td><span class="status real">REAL</span></td><td>Detects simple task → browser path</td></tr>
+                <tr><td>WebLLM Model</td><td><span class="status mock">MOCK</span></td><td>Returns hardcoded "2026-05-05"</td></tr>
+                <tr><td>UI Display</td><td><span class="status real">REAL</span></td><td>Shows [BROWSER] badge</td></tr>
+            </table>
+        </div>
+
+        <div class="demo-card">
+            <h4>Demo 2: <span class="model-type hybrid" style="background:#6f42c1">HYBRID</span> (CSV Analysis)</h4>
+            <p><em>"Summarize the sales data in this CSV"</em></p>
+            <table>
+                <tr><td>Routing</td><td><span class="status real">REAL</span></td><td>Detects data + reasoning → hybrid path</td></tr>
+                <tr><td>Pandas Processing</td><td><span class="status mock">MOCK</span></td><td>Shows fake analysis results</td></tr>
+                <tr><td>Remote Model</td><td><span class="status mock">MOCK</span></td><td>Mock server returns canned response</td></tr>
+                <tr><td>UI Display</td><td><span class="status real">REAL</span></td><td>Shows [HYBRID] badge</td></tr>
+            </table>
+        </div>
+
+        <div class="demo-card">
+            <h4>Demo 3: <span class="model-type remote">REMOTE</span> + Tools (Web Search Agent)</h4>
+            <p><em>"Find the top 3 climate stories this week and save them to my notes"</em></p>
+            <table>
+                <tr><td>Routing</td><td><span class="status real">REAL</span></td><td>Detects tool needs → remote path</td></tr>
+                <tr><td>MCP Discovery</td><td><span class="status real">REAL</span></td><td>Lists actual tools from server</td></tr>
+                <tr><td>Remote Model</td><td><span class="status mock">MOCK</span></td><td>Mock server response</td></tr>
+                <tr><td>Tool Calls</td><td><span class="status mock">MOCK</span></td><td>Simulated web_search, save_to_file</td></tr>
+                <tr><td>UI Display</td><td><span class="status real">REAL</span></td><td>Shows [REMOTE] + [TOOL] badges</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- Quick Setup -->
+    <div class="section">
+        <h2>Quick Setup Commands</h2>
+
+        <h3>Run with Mocks (Current)</h3>
+        <div class="config-box"># Terminal 1: MCP server
+cd spike/mcp_test_server && python server.py
+
+# Terminal 2: Mock SSE server
+cd spike/validation_2_sse && python sse_server.py
+
+# Terminal 3: Demo
+cd demo && python -m http.server 8000
+
+# Open: http://localhost:8000</div>
+
+        <h3>Run with Local Server (Ollama)</h3>
+        <div class="config-box"># Install Ollama: https://ollama.ai
+ollama pull llama3.2
+ollama serve
+
+# In router.py, set:
+USE_MOCK_LOCAL = False
+LOCAL_API_URL = "http://localhost:11434"</div>
+
+        <h3>Run with Real Remote API</h3>
+        <div class="config-box"># In router.py, set:
+USE_MOCK_REMOTE = False
+REMOTE_API_URL = "https://api.openai.com"
+REMOTE_API_KEY = "sk-..."  # Your API key</div>
+    </div>
+
+    <footer>
+        Last updated: May 2026 | Router Demo for PyCon US 2026<br>
+        <a href="index.html">← Back to Demo</a> | <a href="ARCHITECTURE.md">Architecture Doc</a>
+    </footer>
+</body>
+</html>

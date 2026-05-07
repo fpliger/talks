@@ -1,0 +1,6 @@
+name = "Desktop Client: OpenAI"
+
+[files]
+"./hub.py" = ""
+"./hub_assistant.py" = ""
+"./hub_collections.py" = ""

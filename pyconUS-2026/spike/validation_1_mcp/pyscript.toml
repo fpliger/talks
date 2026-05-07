@@ -1,0 +1,2 @@
+# PyScript config for MCP validation
+# No packages needed - we test if mcp can be installed at runtime

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>AI Router Demo - PyCon US 2026</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+
+    <link rel="stylesheet" href="https://pyscript.net/releases/2026.2.1/core.css">
+    <script type="module" src="https://pyscript.net/releases/2026.2.1/core.js"></script>
+
+    <!-- WebLLM for local model -->
+    <script type="module">
+        import * as webllm from "https://esm.run/@mlc-ai/web-llm";
+        window.webllm = webllm;
+        window.webllmReady = false;
+
+        // Don't auto-load model - let user trigger it
+        console.log("WebLLM module loaded, ready for initialization");
+    </script>
+
+    <style>
+        :root {
+            --browser-color: #20c997;  /* Teal - in-browser WebLLM */
+            --local-color: #28a745;    /* Green - local server */
+            --remote-color: #007bff;   /* Blue - remote API */
+            --hybrid-color: #6f42c1;   /* Purple - mixed */
+            --tool-color: #fd7e14;     /* Orange - MCP tools */
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 1rem;
+            background: #f8f9fa;
+        }
+
+        header {
+            text-align: center;
+            padding: 1rem 0 2rem;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 0.25rem;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .demo-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .demo-btn {
+            padding: 0.75rem 1rem;
+            border: 2px solid;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .demo-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .demo-btn.browser { border-color: var(--browser-color); color: var(--browser-color); }
+        .demo-btn.local { border-color: var(--local-color); color: var(--local-color); }
+        .demo-btn.hybrid { border-color: var(--hybrid-color); color: var(--hybrid-color); }
+        .demo-btn.remote { border-color: var(--remote-color); color: var(--remote-color); }
+        .demo-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .chat-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .messages {
+            min-height: 300px;
+            max-height: 500px;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .message {
+            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            max-width: 85%;
+        }
+
+        .message.user {
+            background: #e3f2fd;
+            margin-left: auto;
+        }
+
+        .message.assistant {
+            background: #f5f5f5;
+        }
+
+        .message.system {
+            background: #fff3cd;
+            font-size: 0.85rem;
+            text-align: center;
+            max-width: 100%;
+        }
+
+        .route-badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .route-badge.browser { background: var(--browser-color); color: white; }
+        .route-badge.local { background: var(--local-color); color: white; }
+        .route-badge.remote { background: var(--remote-color); color: white; }
+        .route-badge.hybrid { background: var(--hybrid-color); color: white; }
+        .route-badge.tool { background: var(--tool-color); color: white; }
+
+        .tool-call {
+            background: #fff8e1;
+            border-left: 3px solid var(--tool-color);
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            font-size: 0.85rem;
+            font-family: monospace;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 0.5rem;
+            padding: 1rem;
+            border-top: 1px solid #eee;
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .input-area button {
+            padding: 0.75rem 1.5rem;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 1rem;
+            background: #f8f9fa;
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ccc;
+        }
+
+        .status-dot.ready { background: var(--local-color); }
+        .status-dot.loading { background: #ffc107; animation: pulse 1s infinite; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .streaming-cursor {
+            display: inline-block;
+            width: 8px;
+            height: 16px;
+            background: #333;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Hybrid AI Router Demo</h1>
+        <p class="subtitle">Python orchestration in the browser — in-browser, local, and remote models via PyScript</p>
+    </header>
+
+    <div class="demo-buttons">
+        <button class="demo-btn browser" id="demo1" py-click="run_demo_1">
+            Demo 1: In-Browser<br>
+            <small>WebLLM (date conversion)</small>
+        </button>
+        <button class="demo-btn hybrid" id="demo2" py-click="run_demo_2">
+            Demo 2: Hybrid<br>
+            <small>Pandas + Remote model</small>
+        </button>
+        <button class="demo-btn remote" id="demo3" py-click="run_demo_3">
+            Demo 3: Remote + Tools<br>
+            <small>MCP web search agent</small>
+        </button>
+    </div>
+
+    <div class="chat-container">
+        <div class="messages" id="messages">
+            <div class="message system">
+                Click a demo button above or type your own message below.
+            </div>
+        </div>
+        <div class="input-area">
+            <input type="text" id="user-input" placeholder="Type a message..." py-keydown="handle_keydown">
+            <button py-click="send_message">Send</button>
+        </div>
+        <div class="status-bar">
+            <div class="status-indicator">
+                <span class="status-dot" id="local-status"></span>
+                <span id="local-status-text">Local model: Not loaded</span>
+            </div>
+            <div class="status-indicator">
+                <span class="status-dot ready"></span>
+                <span>Remote API: Ready</span>
+            </div>
+        </div>
+    </div>
+
+    <script type="py" src="./main.py" config="./pyscript.toml"></script>
+</body>
+</html>
