@@ -463,6 +463,30 @@
             },
         };
 
+        // MCP is not a tier button but Demo 3 needs it — probe separately and
+        // disable demo3 with a tooltip if it's unreachable.
+        async function probeMcp() {
+            try {
+                const r = await fetch('http://localhost:8765/health', { signal: AbortSignal.timeout(1500) });
+                const ok = r.ok;
+                const btn = document.getElementById('demo3');
+                if (btn) {
+                    btn.disabled = !ok;
+                    btn.title = ok ? '' : 'MCP server unreachable (port 8765)';
+                    const small = btn.querySelector('small');
+                    if (small) small.textContent = ok ? 'web_search → save_to_file' : '⚠ MCP server offline';
+                }
+            } catch {
+                const btn = document.getElementById('demo3');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.title = 'MCP server unreachable (port 8765)';
+                    const small = btn.querySelector('small');
+                    if (small) small.textContent = '⚠ MCP server offline';
+                }
+            }
+        }
+
         async function probeAll() {
             for (const [tier, probe] of Object.entries(PROBES)) {
                 const dot    = document.getElementById(`dot-${tier}`);
@@ -486,7 +510,8 @@
         // Run probes on load, then every 15s
         document.addEventListener('DOMContentLoaded', () => {
             probeAll();
-            setInterval(probeAll, 15000);
+            probeMcp();
+            setInterval(() => { probeAll(); probeMcp(); }, 15000);
             // Apply initial tint
             selectTier(_selectedTier);
         });

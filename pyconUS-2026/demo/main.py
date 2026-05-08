@@ -222,4 +222,17 @@ async def handle_keydown(event):
 
 print("Router Demo — PyCon US 2026")
 update_status("", "In-browser: Not loaded")
+
+async def _prewarm():
+    """Background pre-warm of WebLLM so Demo 1 in-browser is fast on stage."""
+    from pyscript import window
+    from tiers import _init_browser_engine
+    # Only attempt if the browser reports WebGPU + Cache API are available
+    if not getattr(window.navigator, "gpu", None):
+        return
+    if str(getattr(window, "caches", None)) in ("None", "undefined", ""):
+        return
+    await _init_browser_engine()
+
+asyncio.ensure_future(_prewarm())
 print("Ready.")
