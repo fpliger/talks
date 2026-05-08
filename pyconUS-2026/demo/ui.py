@@ -1,50 +1,53 @@
-"""
-UI Helpers for the Router Demo.
-
-Handles all DOM manipulation: messages, status indicators, etc.
-"""
+"""UI helpers: messages, streaming, tier selector, tool-call pills."""
 
 from pyscript import document
 
 
+# =============================================================================
+# TIER SELECTOR
+# =============================================================================
+
+def get_selected_tier() -> str:
+    """Return the globally selected tier."""
+    from pyscript import window
+    try:
+        value = window.getDemoTier()
+        if value:
+            return str(value)
+    except Exception:
+        pass
+    return "remote"
+
+
+# =============================================================================
+# MESSAGES
+# =============================================================================
+
 def add_message(content, role="assistant", route=None, tool_calls=None):
-    """Add a message to the chat UI.
-
-    Args:
-        content: The message text/HTML
-        role: "user", "assistant", or "system"
-        route: Optional route badge ("browser", "local", "remote", "hybrid", "tool")
-        tool_calls: Optional list of tool call dicts to display
-    """
     messages_div = document.getElementById("messages")
-
     msg = document.createElement("div")
     msg.className = f"message {role}"
 
     html = ""
     if route:
         html += f'<span class="route-badge {route}">{route.upper()}</span><br>'
-
     if tool_calls:
         for tool in tool_calls:
-            html += f'<div class="tool-call">🔧 {tool["name"]}({tool.get("args", {})})</div>'
-
-    html += content
+            html += (
+                f'<div class="tool-call" data-name="{tool["name"]}">'
+                f'🔧 {tool["name"]}({tool.get("args", {})})</div>'
+            )
+    html += f'<span class="content">{content}</span>'
     msg.innerHTML = html
 
     messages_div.appendChild(msg)
     messages_div.scrollTop = messages_div.scrollHeight
-
     return msg
 
 
 def add_streaming_message(route=None):
-    """Add an empty message for streaming content.
-
-    Returns the message element so you can update it with update_streaming_message().
-    """
+    """Create an empty streaming bubble; update with update_streaming_message()."""
     messages_div = document.getElementById("messages")
-
     msg = document.createElement("div")
     msg.className = "message assistant"
 
@@ -56,38 +59,71 @@ def add_streaming_message(route=None):
 
     messages_div.appendChild(msg)
     messages_div.scrollTop = messages_div.scrollHeight
-
     return msg
 
 
 def update_streaming_message(msg, token):
-    """Append a token to a streaming message."""
     content_span = msg.querySelector(".content")
     content_span.textContent += token
     msg.parentElement.scrollTop = msg.parentElement.scrollHeight
 
 
 def finish_streaming_message(msg):
-    """Remove the cursor from a streaming message."""
     cursor = msg.querySelector(".streaming-cursor")
     if cursor:
         cursor.remove()
 
 
-def clear_messages():
-    """Clear all messages from the chat."""
+def add_tool_call_pill(tc):
+    """Render a yellow tool-call pill for a ToolCall object."""
     messages_div = document.getElementById("messages")
-    messages_div.innerHTML = ""
+    div = document.createElement("div")
+    div.className = "message tool-call-pill"
+    import json
+    args_str = json.dumps(tc.args, ensure_ascii=False)
+    div.innerHTML = (
+        f'<span class="route-badge tool">TOOL</span><br>'
+        f'<div class="tool-call" data-name="{tc.name}">'
+        f'🔧 <strong>{tc.name}</strong>({args_str})</div>'
+    )
+    messages_div.appendChild(div)
+    messages_div.scrollTop = messages_div.scrollHeight
+    return div
 
+
+def add_tool_result(tc, result_text):
+    """Render a collapsible tool result block."""
+    messages_div = document.getElementById("messages")
+    div = document.createElement("div")
+    div.className = "message tool-result"
+    escaped = result_text.replace("<", "&lt;").replace(">", "&gt;")
+    div.innerHTML = (
+        f'<details><summary>🔍 Result from <strong>{tc.name}</strong></summary>'
+        f'<pre class="tool-result-body">{escaped}</pre></details>'
+    )
+    messages_div.appendChild(div)
+    messages_div.scrollTop = messages_div.scrollHeight
+    return div
+
+
+def clear_messages():
+    document.getElementById("messages").innerHTML = ""
+
+
+# =============================================================================
+# STATUS BAR
+# =============================================================================
 
 def update_status(status, text):
-    """Update the model status indicator in the status bar.
-
-    Args:
-        status: CSS class for the dot ("ready", "loading", or "")
-        text: Status text to display
-    """
-    dot = document.getElementById("local-status")
     label = document.getElementById("local-status-text")
-    dot.className = f"status-dot {status}"
-    label.textContent = text
+    if label:
+        label.textContent = text
+
+
+def update_progress(pct: int, text: str):
+    bar = document.getElementById("progress-fill")
+    label = document.getElementById("progress-text")
+    if bar:
+        bar.style.width = f"{max(0, min(100, pct))}%"
+    if label:
+        label.textContent = text

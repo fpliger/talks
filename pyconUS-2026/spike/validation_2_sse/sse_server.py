@@ -30,6 +30,18 @@ class SSEHandler(BaseHTTPRequestHandler):
         self._send_cors_headers()
         self.end_headers()
 
+    def do_GET(self):
+        if self.path == "/health":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self._send_cors_headers()
+            self.end_headers()
+            self.wfile.write(b'{"status": "ok"}')
+        else:
+            self.send_response(404)
+            self._send_cors_headers()
+            self.end_headers()
+
     def do_POST(self):
         if self.path == "/v1/chat/completions":
             self._handle_completions()

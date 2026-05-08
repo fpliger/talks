@@ -1,33 +1,37 @@
-"""
-Configuration for the Router Demo.
+"""Configuration for the Router Demo.
 
-Toggle USE_MOCK_* to switch between mock and real backends.
+DEMO_DEFAULTS sets the pre-selected tier for each demo button.
+Switch tiers live using the selector in the UI.
+Set REMOTE_API_KEY (or env var REMOTE_API_KEY) to use a real frontier API;
+otherwise the demo falls back to the local mock SSE server.
 """
+
+import os
 
 # =============================================================================
-# MODEL BACKENDS
+# DEMO DEFAULTS — which tier each demo button pre-selects
 # =============================================================================
+# "in-browser" | "local" | "remote"
+DEMO_DEFAULTS = {1: "in-browser", 2: "remote", 3: "remote"}
 
-# In-browser model (WebLLM via WebGPU)
-USE_MOCK_BROWSER = True
+# =============================================================================
+# IN-BROWSER MODEL (WebLLM via WebGPU)
+# =============================================================================
 BROWSER_MODEL_ID = "Llama-3.2-1B-Instruct-q4f32_1-MLC"
 
-# Local server model (Ollama, LM Studio, llama.cpp, etc.)
-USE_MOCK_LOCAL = True
-LOCAL_API_URL = "http://localhost:11434"
-LOCAL_API_MODEL = "llama3.2"
-
-# Remote API model (OpenAI, Anthropic, etc.)
-USE_MOCK_REMOTE = True
-REMOTE_API_URL = "http://localhost:8766"  # Mock server for demo
-REMOTE_API_KEY = ""  # Set for real APIs (e.g., "sk-...")
+# =============================================================================
+# LOCAL SERVER (Ollama / LM Studio / llama.cpp — OpenAI-compatible)
+# =============================================================================
+LOCAL_API_URL = os.environ.get("LOCAL_API_URL", "http://localhost:11434")
+LOCAL_API_MODEL = os.environ.get("LOCAL_API_MODEL", "llama3.2")
 
 # =============================================================================
-# MCP TOOLS
+# REMOTE API (real frontier model, or mock SSE server on :8766)
 # =============================================================================
+REMOTE_API_URL = os.environ.get("REMOTE_API_URL", "http://localhost:8766")
+REMOTE_API_KEY = os.environ.get("REMOTE_API_KEY", "")
 
-MCP_SERVER_URL = "http://localhost:8765"
-
 # =============================================================================
-# For the talk: Show this file first to explain the architecture
+# MCP TOOLS SERVER
 # =============================================================================
+MCP_SERVER_URL = os.environ.get("MCP_SERVER_URL", "http://localhost:8765")

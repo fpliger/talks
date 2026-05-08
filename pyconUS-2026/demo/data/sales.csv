@@ -1,0 +1,157 @@
+date,product,region,revenue,qty
+2026-01-03,Widget Pro,North America,12400,31
+2026-01-05,Widget Lite,Europe,6200,42
+2026-01-07,Analytics Suite,Asia Pacific,18900,9
+2026-01-10,Widget Pro,Europe,11800,29
+2026-01-12,Data Connector,North America,9500,19
+2026-01-14,Widget Lite,Asia Pacific,4800,32
+2026-01-17,Analytics Suite,North America,22100,11
+2026-01-19,Widget Pro,Asia Pacific,13600,34
+2026-01-21,Data Connector,Europe,8700,17
+2026-01-24,Widget Lite,North America,5900,40
+2026-01-26,Analytics Suite,Europe,19800,10
+2026-01-28,Widget Pro,North America,14200,35
+2026-01-31,Data Connector,Asia Pacific,7600,15
+2026-02-02,Widget Lite,Europe,6400,43
+2026-02-04,Analytics Suite,Asia Pacific,21300,11
+2026-02-07,Widget Pro,Europe,12900,32
+2026-02-09,Data Connector,North America,10200,20
+2026-02-11,Widget Lite,Asia Pacific,5100,35
+2026-02-14,Analytics Suite,North America,23400,12
+2026-02-16,Widget Pro,Asia Pacific,14800,37
+2026-02-18,Data Connector,Europe,9100,18
+2026-02-21,Widget Lite,North America,6200,42
+2026-02-23,Analytics Suite,Europe,20700,11
+2026-02-25,Widget Pro,North America,15100,38
+2026-02-28,Data Connector,Asia Pacific,8000,16
+2026-03-02,Widget Lite,Europe,6700,45
+2026-03-04,Analytics Suite,Asia Pacific,22600,12
+2026-03-07,Widget Pro,Europe,13500,34
+2026-03-09,Data Connector,North America,10800,21
+2026-03-11,Widget Lite,Asia Pacific,5400,37
+2026-03-14,Analytics Suite,North America,24800,13
+2026-03-16,Widget Pro,Asia Pacific,15600,39
+2026-03-18,Data Connector,Europe,9600,19
+2026-03-21,Widget Lite,North America,6500,44
+2026-03-23,Analytics Suite,Europe,21900,12
+2026-03-25,Widget Pro,North America,15800,40
+2026-03-28,Data Connector,Asia Pacific,8400,17
+2026-03-30,Widget Lite,Europe,7000,47
+2026-04-01,Analytics Suite,Asia Pacific,23900,13
+2026-04-04,Widget Pro,Europe,14200,36
+2026-04-06,Data Connector,North America,11400,22
+2026-04-08,Widget Lite,Asia Pacific,5700,39
+2026-04-11,Analytics Suite,North America,26200,14
+2026-04-13,Widget Pro,Asia Pacific,16400,41
+2026-04-15,Data Connector,Europe,10100,20
+2026-04-18,Widget Lite,North America,6800,46
+2026-04-20,Analytics Suite,Europe,23100,13
+2026-04-22,Widget Pro,North America,16600,42
+2026-04-25,Data Connector,Asia Pacific,8900,18
+2026-04-27,Widget Lite,Europe,7300,49
+2026-04-29,Analytics Suite,Asia Pacific,25200,14
+2026-05-02,Widget Pro,Europe,14900,38
+2026-05-04,Data Connector,North America,12000,23
+2026-05-06,Widget Lite,Asia Pacific,6000,41
+2026-05-09,Analytics Suite,North America,27600,15
+2026-05-11,Widget Pro,Asia Pacific,17200,43
+2026-05-13,Data Connector,Europe,10600,21
+2026-05-16,Widget Lite,North America,7100,48
+2026-05-18,Analytics Suite,Europe,24300,14
+2026-05-20,Widget Pro,North America,17400,44
+2026-05-23,Data Connector,Asia Pacific,9400,19
+2026-05-25,Widget Lite,Europe,7600,51
+2026-05-27,Analytics Suite,Asia Pacific,26500,15
+2026-05-30,Widget Pro,Europe,15600,40
+2026-06-01,Data Connector,North America,12600,24
+2026-06-03,Widget Lite,Asia Pacific,6300,43
+2026-06-06,Analytics Suite,North America,29000,16
+2026-06-08,Widget Pro,Asia Pacific,18000,45
+2026-06-10,Data Connector,Europe,11100,22
+2026-06-13,Widget Lite,North America,7400,50
+2026-06-15,Analytics Suite,Europe,25500,15
+2026-06-17,Widget Pro,North America,18200,46
+2026-06-20,Data Connector,Asia Pacific,9900,20
+2026-06-22,Widget Lite,Europe,7900,53
+2026-06-24,Analytics Suite,Asia Pacific,27800,16
+2026-06-27,Widget Pro,Europe,16300,42
+2026-06-29,Data Connector,North America,13200,25
+2026-07-01,Widget Lite,Asia Pacific,6600,45
+2026-07-04,Analytics Suite,North America,30400,17
+2026-07-06,Widget Pro,Asia Pacific,18800,47
+2026-07-08,Data Connector,Europe,11600,23
+2026-07-11,Widget Lite,North America,7700,52
+2026-07-13,Analytics Suite,Europe,26700,16
+2026-07-15,Widget Pro,North America,19000,48
+2026-07-18,Data Connector,Asia Pacific,10400,21
+2026-07-20,Widget Lite,Europe,8200,55
+2026-07-22,Analytics Suite,Asia Pacific,29100,17
+2026-07-25,Widget Pro,Europe,17000,44
+2026-07-27,Data Connector,North America,13800,26
+2026-07-29,Widget Lite,Asia Pacific,6900,47
+2026-08-01,Analytics Suite,North America,31800,18
+2026-08-03,Widget Pro,Asia Pacific,19600,49
+2026-08-05,Data Connector,Europe,12100,24
+2026-08-08,Widget Lite,North America,8000,54
+2026-08-10,Analytics Suite,Europe,27900,17
+2026-08-12,Widget Pro,North America,19800,50
+2026-08-15,Data Connector,Asia Pacific,10900,22
+2026-08-17,Widget Lite,Europe,8500,57
+2026-08-19,Analytics Suite,Asia Pacific,30400,18
+2026-08-22,Widget Pro,Europe,17700,46
+2026-08-24,Data Connector,North America,14400,27
+2026-08-26,Widget Lite,Asia Pacific,7200,49
+2026-08-29,Analytics Suite,North America,33200,19
+2026-08-31,Widget Pro,Asia Pacific,20400,51
+2026-09-02,Data Connector,Europe,12600,25
+2026-09-05,Widget Lite,North America,8300,56
+2026-09-07,Analytics Suite,Europe,29100,18
+2026-09-09,Widget Pro,North America,20600,52
+2026-09-12,Data Connector,Asia Pacific,11400,23
+2026-09-14,Widget Lite,Europe,8800,59
+2026-09-16,Analytics Suite,Asia Pacific,31700,19
+2026-09-19,Widget Pro,Europe,18400,48
+2026-09-21,Data Connector,North America,15000,28
+2026-09-23,Widget Lite,Asia Pacific,7500,51
+2026-09-26,Analytics Suite,North America,34600,20
+2026-09-28,Widget Pro,Asia Pacific,21200,53
+2026-09-30,Data Connector,Europe,13100,26
+2026-10-03,Widget Lite,North America,8600,58
+2026-10-05,Analytics Suite,Europe,30300,19
+2026-10-07,Widget Pro,North America,21400,54
+2026-10-10,Data Connector,Asia Pacific,11900,24
+2026-10-12,Widget Lite,Europe,9100,61
+2026-10-14,Analytics Suite,Asia Pacific,33000,20
+2026-10-17,Widget Pro,Europe,19100,50
+2026-10-19,Data Connector,North America,15600,29
+2026-10-21,Widget Lite,Asia Pacific,7800,53
+2026-10-24,Analytics Suite,North America,36000,21
+2026-10-26,Widget Pro,Asia Pacific,22000,55
+2026-10-28,Data Connector,Europe,13600,27
+2026-10-31,Widget Lite,North America,8900,60
+2026-11-02,Analytics Suite,Europe,31500,20
+2026-11-04,Widget Pro,North America,22200,56
+2026-11-07,Data Connector,Asia Pacific,12400,25
+2026-11-09,Widget Lite,Europe,9400,63
+2026-11-11,Analytics Suite,Asia Pacific,34300,21
+2026-11-14,Widget Pro,Europe,19800,52
+2026-11-16,Data Connector,North America,16200,30
+2026-11-18,Widget Lite,Asia Pacific,8100,55
+2026-11-21,Analytics Suite,North America,37400,22
+2026-11-23,Widget Pro,Asia Pacific,22800,57
+2026-11-25,Data Connector,Europe,14100,28
+2026-11-28,Widget Lite,North America,9200,62
+2026-11-30,Analytics Suite,Europe,32700,21
+2026-12-02,Widget Pro,North America,23000,58
+2026-12-05,Data Connector,Asia Pacific,12900,26
+2026-12-07,Widget Lite,Europe,9700,65
+2026-12-09,Analytics Suite,Asia Pacific,35600,22
+2026-12-12,Widget Pro,Europe,20500,54
+2026-12-14,Data Connector,North America,16800,31
+2026-12-16,Widget Lite,Asia Pacific,8400,57
+2026-12-19,Analytics Suite,North America,38800,23
+2026-12-21,Widget Pro,Asia Pacific,23600,59
+2026-12-23,Data Connector,Europe,14600,29
+2026-12-26,Widget Lite,North America,9500,64
+2026-12-28,Analytics Suite,Europe,33900,22
+2026-12-30,Widget Pro,North America,23800,60

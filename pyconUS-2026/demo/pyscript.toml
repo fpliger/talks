@@ -1,10 +1,16 @@
 # PyScript configuration for Router Demo
 
+packages = ["pandas"]
+
 [files]
-# Module structure (in dependency order):
-"./config.py" = ""       # Configuration variables
-"./ui.py" = ""           # UI helpers (DOM manipulation)
-"./router.py" = ""       # Routing logic
-"./models.py" = ""       # Model backends (browser, local, remote)
-"./tools.py" = ""        # MCP tool functions
-"./main.py" = ""         # Demo handlers + initialization
+# Load order: dependencies before dependents
+"./config.py" = ""
+"./streaming.py" = ""
+"./ui.py" = ""
+"./router.py" = ""
+"./fs_bridge.py" = ""
+"./tools.py" = ""
+"./tiers.py" = ""
+"./models.py" = ""
+"./agent.py" = ""
+"./main.py" = ""
