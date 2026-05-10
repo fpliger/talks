@@ -74,17 +74,25 @@ def finish_streaming_message(msg):
         cursor.remove()
 
 
+_PYODIDE_TOOLS = {"analyze_csv"}
+
 def add_tool_call_pill(tc):
-    """Render a yellow tool-call pill for a ToolCall object."""
+    """Render a tool-call pill. Pyodide tools get a purple PYODIDE badge; MCP tools get amber TOOL."""
     messages_div = document.getElementById("messages")
     div = document.createElement("div")
     div.className = "message tool-call-pill"
     import json
     args_str = json.dumps(tc.args, ensure_ascii=False)
+    if tc.name in _PYODIDE_TOOLS:
+        badge = '<span class="route-badge pyodide">PYODIDE</span>'
+        icon = "🐍"
+    else:
+        badge = '<span class="route-badge tool">MCP TOOL</span>'
+        icon = "🔧"
     div.innerHTML = (
-        f'<span class="route-badge tool">TOOL</span><br>'
+        f'{badge}<br>'
         f'<div class="tool-call" data-name="{tc.name}">'
-        f'🔧 <strong>{tc.name}</strong>({args_str})</div>'
+        f'{icon} <strong>{tc.name}</strong>({args_str})</div>'
     )
     messages_div.appendChild(div)
     messages_div.scrollTop = messages_div.scrollHeight

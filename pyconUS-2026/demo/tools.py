@@ -1,10 +1,78 @@
-"""MCP tool client and tool-call normalization helpers."""
+"""MCP tool client, Pyodide-backed tools, and tool-call normalization helpers."""
 
 import json
 from pyscript import fetch
 
 from config import MCP_SERVER_URL
 from fs_bridge import save_file
+
+
+# =============================================================================
+# PYODIDE-BACKED TOOLS
+# These run entirely in the browser — no network call, no backend.
+# The LLM decides to call them just like any other tool.
+# =============================================================================
+
+PYODIDE_TOOLS = [
+    {
+        "name": "analyze_csv",
+        "description": (
+            "Analyze a CSV file using Pandas running in the browser (Pyodide). "
+            "Returns row count, total revenue, top product by revenue, and QoQ growth. "
+            "No data leaves the browser."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Path to the CSV file, relative to the demo root (e.g. './data/sales.csv')",
+                }
+            },
+            "required": ["path"],
+        },
+    }
+]
+
+
+async def _call_analyze_csv(arguments: dict) -> dict:
+    """Run Pandas analysis in Pyodide. Returns a structured summary string."""
+    import io as _io
+    try:
+        import pandas as pd
+    except ImportError:
+        return {"content": [{"type": "text", "text": "Pandas not available in this environment."}]}
+
+    path = arguments.get("path", "./data/sales.csv")
+    try:
+        response = await fetch(path)
+        csv_text = await response.text()
+        df = pd.read_csv(_io.StringIO(csv_text))
+
+        rows = len(df)
+        total_rev = df["revenue"].sum()
+        top_product = df.groupby("product")["revenue"].sum().idxmax()
+        top_rev = df.groupby("product")["revenue"].sum().max()
+
+        try:
+            df["date"] = pd.to_datetime(df["date"])
+            df["quarter"] = df["date"].dt.quarter
+            q_rev = df.groupby("quarter")["revenue"].sum()
+            qoq = ((q_rev.iloc[-1] - q_rev.iloc[-2]) / q_rev.iloc[-2] * 100) if len(q_rev) >= 2 else 0
+            qoq_str = f"{qoq:+.1f}% QoQ"
+        except Exception:
+            qoq_str = "N/A"
+
+        summary = (
+            f"Rows: {rows:,} | "
+            f"Total revenue: ${total_rev:,.0f} | "
+            f"Top product: {top_product} (${top_rev:,.0f}) | "
+            f"QoQ growth: {qoq_str}"
+        )
+        return {"content": [{"type": "text", "text": summary}]}
+
+    except Exception as e:
+        return {"content": [{"type": "text", "text": f"CSV analysis failed: {e}"}]}
 
 
 # =============================================================================
@@ -23,7 +91,16 @@ async def list_tools() -> list:
 
 
 async def call_tool(name: str, arguments: dict) -> dict:
-    """Execute a tool: intercept save_to_file for FS Access API, else call MCP."""
+    """Execute a tool by name.
+
+    Dispatch order:
+      1. analyze_csv  → Pyodide (in-browser Pandas, no network)
+      2. save_to_file → File System Access API / download (no backend)
+      3. everything else → MCP HTTP server
+    """
+    if name == "analyze_csv":
+        return await _call_analyze_csv(arguments)
+
     if name == "save_to_file":
         filename = arguments.get("filename", "notes.md")
         content = arguments.get("content", "")

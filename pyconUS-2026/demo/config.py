@@ -28,8 +28,9 @@ LOCAL_API_MODEL = os.environ.get("LOCAL_API_MODEL", "llama3.2")
 # =============================================================================
 # REMOTE API (real frontier model, or mock SSE server on :8766)
 # =============================================================================
-REMOTE_API_URL = os.environ.get("REMOTE_API_URL", "http://localhost:8766")
-REMOTE_API_KEY = os.environ.get("REMOTE_API_KEY", "")
+REMOTE_API_URL   = os.environ.get("REMOTE_API_URL",   "http://localhost:8766")
+REMOTE_API_KEY   = os.environ.get("REMOTE_API_KEY",   "")
+REMOTE_API_MODEL = os.environ.get("REMOTE_API_MODEL", "claude-sonnet-4-6")
 
 # =============================================================================
 # MCP TOOLS SERVER

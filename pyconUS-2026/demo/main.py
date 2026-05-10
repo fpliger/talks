@@ -1,15 +1,14 @@
 """Router Demo — main entry point.
 
 Demo 1: In-browser date conversion (default tier: in-browser)
-Demo 2: Hybrid — Pandas in Pyodide + LLM narrative (default tier: remote)
-Demo 3: Remote + MCP tools agent loop (default tier: remote)
+Demo 2: LLM calls analyze_csv Pyodide tool, then narrates results (default tier: remote)
+Demo 3: LLM calls MCP tools over HTTP — web_search + save_to_file (default tier: remote)
 
 Each demo reads its tier selector, then streams through the chosen tier.
 """
 
 import asyncio
-import io
-from pyscript import document, fetch
+from pyscript import document
 
 from ui import (
     add_message, clear_messages, update_status,
@@ -18,8 +17,9 @@ from ui import (
 )
 from router import route_request
 from tiers import get_tier
-from tools import list_tools, format_tools_for_llm
+from tools import list_tools, format_tools_for_llm, PYODIDE_TOOLS
 from agent import run_agent_loop
+from metrics import start_timer, record_ttft
 
 
 # =============================================================================
@@ -30,8 +30,13 @@ async def _stream_into_bubble(tier, messages, tools=None, route=None):
     """Stream tier.stream_chat() into a new message bubble. Returns full text."""
     msg = add_streaming_message(route=route)
     full_text = ""
+    t = start_timer()
+    first_token = True
     async for delta in tier.stream_chat(messages, tools):
         if delta.text:
+            if first_token:
+                record_ttft(t)
+                first_token = False
             update_streaming_message(msg, delta.text)
             full_text += delta.text
     finish_streaming_message(msg)
@@ -52,13 +57,15 @@ async def run_demo_1(event=None):
 
     routing = route_request(prompt)
     add_message(f"<em>Routing → {tier_name.upper()} · {routing['reason']}</em>", role="system")
+    from pyscript import window as _win
+    _win.animateRoute(tier_name, routing.get("keyword", "date"))
 
     messages = [{"role": "user", "content": prompt}]
     await _stream_into_bubble(tier, messages, route=tier_name)
 
 
 # =============================================================================
-# DEMO 2 — Hybrid: Pandas in-browser + LLM narrative
+# DEMO 2 — LLM calls analyze_csv (Pyodide tool) then narrates results
 # =============================================================================
 
 async def run_demo_2(event=None):
@@ -66,70 +73,61 @@ async def run_demo_2(event=None):
     tier_name = get_selected_tier()
     tier = get_tier(tier_name)
 
-    prompt = "Summarize this 200-line CSV I just dropped in"
+    prompt = "Analyze the sales CSV at ./data/sales.csv and write a 3-sentence executive summary suitable for a board slide."
     add_message(prompt, role="user")
-    add_message("<em>Step 1 → Local Pandas (browser) — no network</em>", role="system")
 
-    # --- Pandas analysis in Pyodide ---
-    try:
-        import pandas as pd
-
-        response = await fetch("./data/sales.csv")
-        csv_text = await response.text()
-        df = pd.read_csv(io.StringIO(csv_text))
-
-        rows = len(df)
-        total_rev = df["revenue"].sum()
-        top_product = df.groupby("product")["revenue"].sum().idxmax()
-        top_rev = df.groupby("product")["revenue"].sum().max()
-
-        # QoQ growth: compare Q2 vs Q1 if date column present
-        try:
-            df["date"] = pd.to_datetime(df["date"])
-            df["quarter"] = df["date"].dt.quarter
-            q_rev = df.groupby("quarter")["revenue"].sum()
-            qoq = ((q_rev.iloc[-1] - q_rev.iloc[-2]) / q_rev.iloc[-2] * 100) if len(q_rev) >= 2 else 0
-            qoq_str = f"{qoq:+.1f}% QoQ"
-        except Exception:
-            qoq_str = "N/A"
-
-        summary = (
-            f"Rows: {rows:,} · "
-            f"Total revenue: ${total_rev:,.0f} · "
-            f"Top product: {top_product} (${top_rev:,.0f}) · "
-            f"Growth: {qoq_str}"
-        )
-
-        pandas_msg = document.getElementById("messages")
-        div = document.createElement("div")
-        div.className = "message assistant"
-        div.innerHTML = (
-            f'<span class="route-badge in-browser">IN-BROWSER</span><br>'
-            f'<span class="content">'
-            f'<strong>Pandas analysis</strong><br>'
-            f'<code style="display:block;margin-top:.5rem;white-space:pre-wrap">{summary}</code>'
-            f'</span>'
-        )
-        pandas_msg.appendChild(div)
-        pandas_msg.scrollTop = pandas_msg.scrollHeight
-
-    except Exception as e:
-        summary = f"(Pandas unavailable: {e} — using placeholder data)"
-        add_message(f"<em>{summary}</em>", role="system")
-        summary = "Rows: 200 · Total revenue: $2,400,000 · Top product: Widget Pro · Growth: +12% QoQ"
-
-    # --- Remote / selected tier frames the results ---
+    routing = route_request(prompt)
     add_message(
-        f"<em>Step 2 → {tier_name.upper()} model frames the narrative</em>",
+        f"<em>Routing → {tier_name.upper()} + Pyodide tool · {routing['reason']}</em>",
         role="system",
     )
+    from pyscript import window as _win
+    _win.animateRoute(tier_name, "CSV")
 
-    framing_prompt = (
-        f"You are a data analyst. Based on this sales summary, write a 3-sentence "
-        f"executive summary suitable for a board slide:\n\n{summary}"
+    tools_for_llm = format_tools_for_llm(PYODIDE_TOOLS)
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are a data analyst assistant. You have access to an analyze_csv tool "
+                "that runs Pandas in the browser — no data leaves the device. "
+                "When asked to analyze a CSV, always call analyze_csv first, "
+                "then write your summary based on the tool result."
+            ),
+        },
+        {"role": "user", "content": prompt},
+    ]
+
+    current_bubble = [None]
+
+    def on_turn_start():
+        current_bubble[0] = add_streaming_message(route=tier_name)
+
+    def on_turn_end():
+        if current_bubble[0]:
+            finish_streaming_message(current_bubble[0])
+            current_bubble[0] = None
+
+    def on_delta(text):
+        if current_bubble[0]:
+            update_streaming_message(current_bubble[0], text)
+
+    def on_tool_call(tc):
+        add_tool_call_pill(tc)
+
+    def on_tool_result(tc, result_text):
+        add_tool_result(tc, result_text)
+
+    await run_agent_loop(
+        tier=tier,
+        messages=messages,
+        tools=tools_for_llm,
+        on_delta=on_delta,
+        on_tool_call=on_tool_call,
+        on_tool_result=on_tool_result,
+        on_turn_start=on_turn_start,
+        on_turn_end=on_turn_end,
     )
-    messages = [{"role": "user", "content": framing_prompt}]
-    await _stream_into_bubble(tier, messages, route=tier_name)
 
 
 # =============================================================================
@@ -149,6 +147,8 @@ async def run_demo_3(event=None):
         f"<em>Routing → {tier_name.upper()} + MCP tools · {routing['reason']}</em>",
         role="system",
     )
+    from pyscript import window as _win
+    _win.animateRoute(tier_name, routing.get("keyword", "agent"))
 
     # Discover tools
     mcp_tools = await list_tools()
@@ -156,7 +156,18 @@ async def run_demo_3(event=None):
     add_message(f"<em>MCP tools available: {', '.join(tool_names)}</em>", role="system")
 
     tools_for_llm = format_tools_for_llm(mcp_tools)
-    messages = [{"role": "user", "content": prompt}]
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are a research assistant with access to tools. "
+                "When asked to find information, call web_search first. "
+                "When asked to save results, call save_to_file. "
+                "Always use the tools available — do not fabricate results."
+            ),
+        },
+        {"role": "user", "content": prompt},
+    ]
 
     # Streaming bubble state — held across turns
     current_bubble = [None]
@@ -205,6 +216,10 @@ async def send_message(event=None):
     add_message(prompt, role="user")
     tier_name = get_selected_tier()
     add_message(f"<em>Tier: {tier_name}</em>", role="system")
+
+    routing = route_request(prompt)
+    from pyscript import window as _win
+    _win.animateRoute(tier_name, routing.get("keyword", ""))
 
     tier = get_tier(tier_name)
     messages = [{"role": "user", "content": prompt}]

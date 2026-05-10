@@ -53,10 +53,12 @@ def route_request(prompt: str) -> dict:
                 needed_tools.append(tool)
 
     if needed_tools:
+        matched_kw = next((p for p in tool_patterns if p in prompt_lower), needed_tools[0])
         return {
             "path": "remote",
             "reason": f"Requires tools: {', '.join(needed_tools)}",
-            "needs_tools": needed_tools
+            "needs_tools": needed_tools,
+            "keyword": matched_kw,
         }
 
     # Check for hybrid patterns
@@ -65,7 +67,8 @@ def route_request(prompt: str) -> dict:
             return {
                 "path": "hybrid",
                 "reason": "Data processing + reasoning needed",
-                "needs_tools": []
+                "needs_tools": [],
+                "keyword": pattern,
             }
 
     # Check for browser-local patterns (simple, fast, private)
@@ -74,12 +77,14 @@ def route_request(prompt: str) -> dict:
             return {
                 "path": "browser",
                 "reason": "Simple task → in-browser (WebLLM)",
-                "needs_tools": []
+                "needs_tools": [],
+                "keyword": pattern,
             }
 
     # Default to remote for complex queries
     return {
         "path": "remote",
         "reason": "Complex query → remote model",
-        "needs_tools": []
+        "needs_tools": [],
+        "keyword": "",
     }

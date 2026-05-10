@@ -15,7 +15,7 @@ import js
 from config import (
     BROWSER_MODEL_ID,
     LOCAL_API_URL, LOCAL_API_MODEL,
-    REMOTE_API_URL, REMOTE_API_KEY,
+    REMOTE_API_URL, REMOTE_API_KEY, REMOTE_API_MODEL,
 )
 from streaming import Delta, ToolCall, parse_openai_sse
 from ui import update_status, update_progress
@@ -167,6 +167,7 @@ class RemoteTier:
 
     async def stream_chat(self, messages, tools=None):
         payload = {
+            "model": REMOTE_API_MODEL,
             "messages": messages,
             "stream": True,
         }
