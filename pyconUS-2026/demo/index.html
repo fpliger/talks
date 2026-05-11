@@ -24,6 +24,7 @@
 
     <style>
         :root {
+            --main-top: 320px; /* overwritten by JS after DOMContentLoaded */
             --browser-color: #1de9b6;
             --local-color:   #69f0ae;
             --remote-color:  #448aff;
@@ -50,6 +51,12 @@
             margin: 0 auto;
             padding: 1.5rem 1.5rem 3rem;
             line-height: 1.6;
+            transition: max-width .25s ease, padding .25s ease;
+        }
+        body.log-open {
+            max-width: 1440px;
+            padding-left: .75rem;
+            padding-right: .75rem;
         }
 
         /* ── HEADER ─────────────────────────────────────── */
@@ -164,37 +171,49 @@
         .demo-btn small { display: block; font-size: .78rem; opacity: .65; margin-top: .2rem; font-weight: 400; }
         .demo-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
 
-        /* ── AGENT LOG PANEL ────────────────────────────── */
-        .log-panel {
-            margin-top: .75rem;
+        /* ── MAIN AREA (chat + optional side log) ──────────── */
+        .main-area {
+            display: flex;
+            gap: .75rem;
+            align-items: stretch;
+        }
+        .main-area .chat-container {
+            flex: 1 1 0;
+            min-width: 0;
+        }
+
+        /* ── LOG TOGGLE TAB ─────────────────────────────── */
+        .log-tab {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: .4rem;
+            width: 28px;
+            flex-shrink: 0;
+            background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 10px;
-            background: var(--code-bg);
-            overflow: hidden;
-        }
-        .log-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: .45rem .85rem;
+            border-radius: 8px;
             cursor: pointer;
+            padding: .5rem 0;
+            transition: border-color .15s, background .15s;
             user-select: none;
-            border-bottom: 1px solid transparent;
-            transition: border-color .2s;
         }
-        .log-panel.open .log-header {
-            border-bottom-color: var(--border);
+        .log-tab:hover { border-color: var(--muted); background: var(--surface2); }
+        .log-tab.active {
+            border-color: var(--local-color);
+            background: color-mix(in srgb, var(--local-color) 8%, var(--surface));
         }
-        .log-header-left {
-            display: flex;
-            align-items: center;
-            gap: .5rem;
+        .log-tab-label {
             font-family: 'JetBrains Mono', monospace;
-            font-size: .78rem;
+            font-size: .65rem;
             color: var(--muted);
-            font-weight: 500;
-            letter-spacing: .03em;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            letter-spacing: .08em;
+            transform: rotate(180deg);
         }
+        .log-tab.active .log-tab-label { color: var(--local-color); }
         .log-indicator {
             width: 7px; height: 7px;
             border-radius: 50%;
@@ -203,35 +222,71 @@
             flex-shrink: 0;
         }
         .log-indicator.active { background: var(--local-color); animation: pulse 1s ease-in-out infinite; }
-        .log-chevron {
-            font-size: .7rem;
-            color: var(--muted);
-            transition: transform .2s;
-        }
-        .log-panel.open .log-chevron { transform: rotate(180deg); }
-        .log-body {
+
+        /* ── SIDE LOG PANEL ─────────────────────────────── */
+        .log-panel {
             display: none;
-            height: 160px;
-            overflow-y: auto;
-            padding: .5rem .75rem;
+            flex-direction: column;
+            flex: 1 1 0;
+            min-width: 0;
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
         }
-        .log-panel.open .log-body { display: block; }
+        .log-panel.open { display: flex; }
+        .log-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: .45rem .75rem;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .log-header-left {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .75rem;
+            color: var(--muted);
+            font-weight: 500;
+            letter-spacing: .03em;
+        }
+        .log-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: .4rem .6rem;
+        }
+        /* fill viewport from top of main-area to fixed footer */
+        .main-area {
+            height: calc(100vh - var(--main-top) - 2.5rem);
+        }
+        .main-area .chat-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        .main-area .chat-container .messages {
+            flex: 1;
+            min-height: 0;
+            max-height: none;
+        }
+        .log-panel { min-height: 0; }
+        .log-body  { flex: 1; max-height: none; }
+
         .log-entry {
             display: flex;
-            gap: .6rem;
+            gap: .5rem;
             align-items: baseline;
-            padding: .15rem 0;
+            padding: .18rem 0;
             font-family: 'JetBrains Mono', monospace;
-            font-size: .74rem;
+            font-size: .71rem;
             line-height: 1.5;
-            border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+            border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
         }
         .log-entry:last-child { border-bottom: none; }
-        .log-ts {
-            color: var(--muted);
-            flex-shrink: 0;
-            font-size: .68rem;
-        }
+        .log-ts   { color: var(--muted); flex-shrink: 0; font-size: .65rem; }
         .log-icon { flex-shrink: 0; }
         .log-text { color: var(--text); word-break: break-word; }
         .log-text .hl-tier-in-browser { color: var(--browser-color); font-weight: 600; }
@@ -242,8 +297,8 @@
         .log-text .hl-ok              { color: var(--local-color); }
         .log-text .hl-err             { color: #ef5350; }
         .log-clear-btn {
-            font-size: .68rem;
-            padding: .1rem .45rem;
+            font-size: .65rem;
+            padding: .1rem .4rem;
             background: transparent;
             border: 1px solid var(--border);
             border-radius: 4px;
@@ -254,84 +309,64 @@
         }
         .log-clear-btn:hover { border-color: var(--text); color: var(--text); }
 
-        /* ── ROUTING ANIMATION ──────────────────────────── */
-        .routing-viz {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-            margin-bottom: .75rem;
-        }
-        .routing-lane {
-            height: 4px;
-            border-radius: 2px;
-            background: var(--border);
+        /* ── ROUTING ANIMATION (on tier buttons) ──────────── */
+        .tier-btn {
             position: relative;
             overflow: hidden;
         }
-        .routing-lane::after {
+        /* bottom bar that sweeps across the button when its tier is routed to */
+        .tier-btn::after {
             content: '';
             position: absolute;
-            inset: 0;
-            border-radius: 2px;
+            left: 0; right: 0; bottom: 0;
+            height: 3px;
             transform: translateX(-100%);
-            transition: none;
         }
-        .routing-lane.in-browser::after { background: var(--browser-color); box-shadow: 0 0 8px var(--browser-color); }
-        .routing-lane.local::after      { background: var(--local-color);   box-shadow: 0 0 8px var(--local-color); }
-        .routing-lane.remote::after     { background: var(--remote-color);  box-shadow: 0 0 8px var(--remote-color); }
-        .routing-lane.active::after {
+        .tier-btn[data-tier="in-browser"]::after { background: var(--browser-color); box-shadow: 0 0 6px var(--browser-color); }
+        .tier-btn[data-tier="local"]::after      { background: var(--local-color);   box-shadow: 0 0 6px var(--local-color); }
+        .tier-btn[data-tier="remote"]::after     { background: var(--remote-color);  box-shadow: 0 0 6px var(--remote-color); }
+        .tier-btn.routed::after {
             animation: lane-sweep .5s ease forwards;
         }
+        .routing-keyword-chip {
+            font-size: .65rem;
+            padding: .05rem .3rem;
+            border-radius: 3px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--muted);
+            margin-left: auto;
+            transition: border-color .3s, color .3s;
+        }
+        .tier-btn.routed .routing-keyword-chip { border-color: currentColor; color: inherit; }
         @keyframes lane-sweep {
             from { transform: translateX(-100%); }
             to   { transform: translateX(0); }
         }
-        .routing-label {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: .25rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: .72rem;
-            color: var(--muted);
-        }
-        .routing-keyword {
-            font-size: .68rem;
-            padding: .05rem .35rem;
-            border-radius: 3px;
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            transition: border-color .3s, color .3s;
-        }
-        .routing-lane.active ~ .routing-keyword,
-        .routing-lane-wrap.active .routing-keyword {
-            border-color: currentColor;
-        }
-        .routing-lane-wrap {
-            display: flex;
-            flex-direction: column;
-        }
-        .routing-lane-wrap.active .routing-label { color: var(--text); }
 
-        /* ── METRICS STRIP ──────────────────────────────── */
+        /* ── METRICS FOOTER ──────────────────────────────── */
         .metrics-strip {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            z-index: 50;
             display: flex;
             align-items: center;
             gap: .5rem;
-            padding: .4rem .75rem;
+            padding: .35rem 1.25rem;
             background: var(--code-bg);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            margin-bottom: .75rem;
+            border-top: 1px solid var(--border);
             font-family: 'JetBrains Mono', monospace;
             font-size: .75rem;
             color: var(--muted);
         }
+        /* add bottom padding to body so content doesn't hide behind footer */
+        body { padding-bottom: 2.5rem; }
         .metric { white-space: nowrap; }
         .metric-sep { opacity: .35; }
         .metric-spacer { flex: 1; }
         .cold-cache-btn {
-            padding: .25rem .65rem;
+            padding: .2rem .55rem;
             background: transparent;
             border: 1px solid var(--border);
             border-radius: 5px;
@@ -379,8 +414,6 @@
             overflow: hidden;
         }
         .messages {
-            min-height: 320px;
-            max-height: 520px;
             overflow-y: auto;
             padding: 1.25rem;
             display: flex;
@@ -557,23 +590,6 @@
         @keyframes pulse { 50% { opacity: .4; } }
 
         /* ── TRADE-OFFS DRAWER ───────────────────────────── */
-        .drawer-toggle {
-            position: fixed;
-            bottom: 1.5rem;
-            right: 1.5rem;
-            padding: .55rem 1rem;
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            color: var(--muted);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: .8rem;
-            cursor: pointer;
-            z-index: 100;
-            transition: border-color .15s, color .15s;
-        }
-        .drawer-toggle:hover { border-color: var(--text); color: var(--text); }
-
         .drawer-overlay {
             display: none;
             position: fixed;
@@ -704,16 +720,19 @@
             <span class="tier-dot checking" id="dot-in-browser"></span>
             <span class="tier-label">In-browser</span>
             <span class="tier-status" id="status-in-browser">checking…</span>
+            <span class="routing-keyword-chip" id="kw-in-browser"></span>
         </button>
         <button class="tier-btn" data-tier="local" onclick="selectTier('local')">
             <span class="tier-dot checking" id="dot-local"></span>
             <span class="tier-label">Local</span>
             <span class="tier-status" id="status-local">checking…</span>
+            <span class="routing-keyword-chip" id="kw-local"></span>
         </button>
         <button class="tier-btn" data-tier="remote" onclick="selectTier('remote')">
             <span class="tier-dot checking" id="dot-remote"></span>
             <span class="tier-label">Remote</span>
             <span class="tier-status" id="status-remote">checking…</span>
+            <span class="routing-keyword-chip" id="kw-remote"></span>
         </button>
     </div>
 
@@ -741,32 +760,7 @@
         </button>
     </div>
 
-    <!-- Routing animation strip -->
-    <div class="routing-viz" id="routing-viz">
-        <div class="routing-lane-wrap" id="lane-in-browser">
-            <div class="routing-label">
-                <span>In-browser</span>
-                <span class="routing-keyword" id="kw-in-browser"></span>
-            </div>
-            <div class="routing-lane in-browser"></div>
-        </div>
-        <div class="routing-lane-wrap" id="lane-local">
-            <div class="routing-label">
-                <span>Local</span>
-                <span class="routing-keyword" id="kw-local"></span>
-            </div>
-            <div class="routing-lane local"></div>
-        </div>
-        <div class="routing-lane-wrap" id="lane-remote">
-            <div class="routing-label">
-                <span>Remote</span>
-                <span class="routing-keyword" id="kw-remote"></span>
-            </div>
-            <div class="routing-lane remote"></div>
-        </div>
-    </div>
-
-    <!-- Metrics strip + cold-cache toggle -->
+    <!-- Metrics footer -->
     <div class="metrics-strip" id="metrics-strip">
         <span class="metric" id="metric-bundle">Bundle: —</span>
         <span class="metric-sep">·</span>
@@ -774,39 +768,44 @@
         <span class="metric-sep">·</span>
         <span class="metric" id="metric-ttft">TTFT: —</span>
         <span class="metric-spacer"></span>
-        <button class="cold-cache-btn" onclick="clearCaches()" title="Wipe all browser caches and WebLLM model, then reload — shows honest cold-start timing">
-            ↺ Cold reload
-        </button>
+        <button class="cold-cache-btn" onclick="openDrawer()">⚖ Trade-offs</button>
+        <span class="metric-sep">·</span>
+        <button class="cold-cache-btn" onclick="clearCaches()" title="Wipe all browser caches and WebLLM model, then reload">↺ Cold reload</button>
     </div>
 
-    <div class="chat-container">
-        <div class="messages" id="messages">
-            <div class="message system">
-                Select a tier above and click a demo — or type your own message below.
+    <div class="main-area">
+        <div class="chat-container">
+            <div class="messages" id="messages">
+                <div class="message system">
+                    Select a tier above and click a demo — or type your own message below.
+                </div>
+            </div>
+            <div class="input-area">
+                <input type="text" id="user-input" placeholder="Type a message and press Enter…" py-keydown="handle_keydown">
+                <button py-click="send_message">Send</button>
+            </div>
+            <div class="status-bar">
+                <span id="local-status-text" style="font-size:.78rem;color:var(--muted);font-family:'JetBrains Mono',monospace;"></span>
             </div>
         </div>
-        <div class="input-area">
-            <input type="text" id="user-input" placeholder="Type a message and press Enter…" py-keydown="handle_keydown">
-            <button py-click="send_message">Send</button>
-        </div>
-        <div class="status-bar">
-            <span id="local-status-text" style="font-size:.78rem;color:var(--muted);font-family:'JetBrains Mono',monospace;"></span>
-        </div>
-    </div>
 
-    <!-- Agent log panel -->
-    <div class="log-panel open" id="log-panel">
-        <div class="log-header" onclick="toggleLog()">
-            <div class="log-header-left">
-                <span class="log-indicator" id="log-indicator"></span>
-                Agent log
-            </div>
-            <div style="display:flex;align-items:center;gap:.6rem;">
-                <button class="log-clear-btn" onclick="event.stopPropagation();clearLog()">clear</button>
-                <span class="log-chevron">▼</span>
-            </div>
+        <!-- Log toggle tab (vertical pill on the right edge of chat) -->
+        <div class="log-tab" id="log-tab" onclick="toggleLog()" title="Toggle agent log">
+            <span class="log-indicator" id="log-indicator"></span>
+            <span class="log-tab-label">agent log</span>
         </div>
-        <div class="log-body" id="log-body"></div>
+
+        <!-- Side log panel (shown alongside chat when active) -->
+        <div class="log-panel" id="log-panel">
+            <div class="log-header">
+                <div class="log-header-left">
+                    <span class="log-indicator" id="log-indicator-2"></span>
+                    Agent log
+                </div>
+                <button class="log-clear-btn" onclick="clearLog()">clear</button>
+            </div>
+            <div class="log-body" id="log-body"></div>
+        </div>
     </div>
 
     <script>
@@ -901,7 +900,15 @@
             setInterval(() => { probeAll(); probeMcp(); }, 15000);
             selectTier(_selectedTier);
             loadMetricsSnapshot();
+            _setMainTop();
         });
+
+        function _setMainTop() {
+            const area = document.querySelector('.main-area');
+            if (!area) return;
+            const top = area.getBoundingClientRect().top + window.scrollY;
+            document.documentElement.style.setProperty('--main-top', top + 'px');
+        }
 
         // ── Pre-captured metrics snapshot ────────────────────
         async function loadMetricsSnapshot() {
@@ -925,16 +932,16 @@
 
         // ── Agent log ────────────────────────────────────────
         const LOG_ICONS = {
-            route:      '🔀',
-            tier:       '⚙️',
-            llm_start:  '🤖',
-            llm_end:    '✅',
-            tool_call:  '🔧',
+            route:        '🔀',
+            tier:         '⚙️',
+            llm_start:    '🤖',
+            llm_end:      '✅',
+            tool_call:    '🔧',
             tool_pyodide: '🐍',
-            tool_result:'📥',
-            agent_done: '🏁',
-            error:      '❌',
-            info:       'ℹ️',
+            tool_result:  '📥',
+            agent_done:   '🏁',
+            error:        '❌',
+            info:         'ℹ️',
         };
 
         function _logTs() {
@@ -953,10 +960,18 @@
                 .replace(/\b(error|failed|err)\b/gi,       '<span class="hl-err">$1</span>');
         }
 
-        let _logActive = false;
+        function _pulseIndicators() {
+            ['log-indicator', 'log-indicator-2'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.classList.add('active');
+                clearTimeout(el._t);
+                el._t = setTimeout(() => el.classList.remove('active'), 800);
+            });
+        }
+
         window.agentLog = (type, text) => {
             const body = document.getElementById('log-body');
-            const indicator = document.getElementById('log-indicator');
             if (!body) return;
 
             const entry = document.createElement('div');
@@ -967,15 +982,15 @@
                 `<span class="log-text">${_highlightLog(text)}</span>`;
             body.appendChild(entry);
             body.scrollTop = body.scrollHeight;
-
-            // Pulse indicator while active
-            indicator.classList.add('active');
-            clearTimeout(indicator._t);
-            indicator._t = setTimeout(() => indicator.classList.remove('active'), 800);
+            _pulseIndicators();
         };
 
         function toggleLog() {
-            document.getElementById('log-panel').classList.toggle('open');
+            const panel = document.getElementById('log-panel');
+            const tab   = document.getElementById('log-tab');
+            const open  = panel.classList.toggle('open');
+            tab.classList.toggle('active', open);
+            document.body.classList.toggle('log-open', open);
         }
 
         function clearLog() {
@@ -1060,27 +1075,21 @@
 
         // ── Routing animation ────────────────────────────────
         window.animateRoute = (tier, keyword) => {
-            const tiers = ['in-browser', 'local', 'remote'];
-            tiers.forEach(t => {
-                const wrap = document.getElementById(`lane-${t}`);
-                const lane = wrap?.querySelector('.routing-lane');
-                const kw   = document.getElementById(`kw-${t}`);
-                if (!wrap) return;
-                wrap.classList.remove('active');
-                if (lane) { lane.classList.remove('active'); }
-                if (kw) { kw.textContent = ''; }
+            // Clear all tier buttons
+            document.querySelectorAll('.tier-btn').forEach(btn => {
+                btn.classList.remove('routed');
+                const chip = btn.querySelector('.routing-keyword-chip');
+                if (chip) chip.textContent = '';
             });
-            const wrap = document.getElementById(`lane-${tier}`);
-            const lane = wrap?.querySelector('.routing-lane');
-            const kw   = document.getElementById(`kw-${tier}`);
-            if (wrap) wrap.classList.add('active');
-            if (kw && keyword) kw.textContent = keyword;
-            if (lane) {
-                // Force reflow to restart animation
-                lane.classList.remove('active');
-                void lane.offsetWidth;
-                lane.classList.add('active');
-            }
+            // Activate the routed tier button
+            const btn = document.querySelector(`.tier-btn[data-tier="${tier}"]`);
+            if (!btn) return;
+            const chip = btn.querySelector('.routing-keyword-chip');
+            if (chip && keyword) chip.textContent = keyword;
+            // Force reflow to restart animation
+            btn.classList.remove('routed');
+            void btn.offsetWidth;
+            btn.classList.add('routed');
         };
 
         // ── Progress bar visibility (driven by PyScript status updates) ──
@@ -1094,9 +1103,6 @@
             if (label) _progressObserver.observe(label, { childList: true, subtree: true, characterData: true });
         });
     </script>
-
-    <!-- Trade-offs drawer toggle -->
-    <button class="drawer-toggle" onclick="openDrawer()">⚖ Trade-offs</button>
 
     <!-- Overlay + drawer -->
     <div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
