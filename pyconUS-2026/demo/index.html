@@ -1095,11 +1095,13 @@
         const LOG_ICONS = {
             route:        '🔀',
             tier:         '⚙️',
+            agent:        '🔄',
             llm_start:    '🤖',
             llm_end:      '✅',
             tool_call:    '🔧',
             tool_pyodide: '🐍',
             tool_result:  '📥',
+            mcp:          '🌐',
             agent_done:   '🏁',
             error:        '❌',
             info:         'ℹ️',
@@ -1110,15 +1112,19 @@
             return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}.${String(d.getMilliseconds()).padStart(3,'0')}`;
         }
 
-        function _highlightLog(text) {
+        function _highlightLog(raw) {
+            // Escape HTML first so injected text can't break layout
+            const text = raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
             return text
                 .replace(/\b(in-browser)\b/gi, '<span class="hl-tier-in-browser">$1</span>')
                 .replace(/\b(local)\b/gi,      '<span class="hl-tier-local">$1</span>')
                 .replace(/\b(remote)\b/gi,     '<span class="hl-tier-remote">$1</span>')
-                .replace(/\b(pyodide|analyze_csv)\b/gi, '<span class="hl-pyodide">$1</span>')
+                .replace(/\b(pyodide|analyze_csv|Pandas)\b/gi, '<span class="hl-pyodide">$1</span>')
                 .replace(/\b(mcp|web_search|save_to_file)\b/gi, '<span class="hl-mcp">$1</span>')
-                .replace(/\b(ok|success|done|ready)\b/gi,  '<span class="hl-ok">$1</span>')
-                .replace(/\b(error|failed|err)\b/gi,       '<span class="hl-err">$1</span>');
+                .replace(/\bHTTP (2\d\d)\b/g, 'HTTP <span class="hl-ok">$1</span>')
+                .replace(/\bHTTP ([45]\d\d)\b/g, 'HTTP <span class="hl-err">$1</span>')
+                .replace(/\b(ok|success|done|ready|complete)\b/gi,  '<span class="hl-ok">$1</span>')
+                .replace(/\b(error|failed|err|unavailable|exception)\b/gi, '<span class="hl-err">$1</span>');
         }
 
         function _pulseIndicators() {

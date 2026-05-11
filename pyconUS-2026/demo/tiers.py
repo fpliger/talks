@@ -18,7 +18,7 @@ from config import (
     REMOTE_API_URL, REMOTE_API_KEY, REMOTE_API_MODEL,
 )
 from streaming import Delta, ToolCall, parse_openai_sse
-from ui import update_status, update_progress
+from ui import update_status, update_progress, agent_log
 
 
 # =============================================================================
@@ -91,11 +91,14 @@ class InBrowserTier:
     name = "in-browser"
 
     async def stream_chat(self, messages, tools=None):
+        agent_log("tier", f"in-browser: initializing WebLLM engine ({BROWSER_MODEL_ID})")
         ok = await _init_browser_engine()
         if not ok:
+            agent_log("error", "in-browser: engine init failed — model unavailable")
             yield Delta(text="[In-browser model unavailable]", finish_reason="stop")
             return
 
+        agent_log("tier", f"in-browser: sending {len(messages)} message(s) to {BROWSER_MODEL_ID}")
         try:
             # Pass options as a JS object — Python dict kwargs don't survive
             # the async boundary correctly with some WebLLM builds
@@ -107,6 +110,7 @@ class InBrowserTier:
             }, dict_converter=js.Object.fromEntries)
 
             stream = await _browser_engine.chat.completions.create(options)
+            agent_log("tier", "in-browser: stream opened — reading tokens")
 
             async for chunk in stream:
                 # Extract values immediately before yielding — proxies are
@@ -121,9 +125,11 @@ class InBrowserTier:
                 if content:
                     yield Delta(text=content)
                 if finish == "stop":
+                    agent_log("tier", "in-browser: stream finished (stop)")
                     yield Delta(finish_reason="stop")
                     return
         except Exception as e:
+            agent_log("error", f"in-browser: exception during stream — {e}")
             yield Delta(text=f"\n[Error: {e}]", finish_reason="stop")
 
 
@@ -135,6 +141,8 @@ class LocalTier:
     name = "local"
 
     async def stream_chat(self, messages, tools=None):
+        url = f"{LOCAL_API_URL}/v1/chat/completions"
+        agent_log("tier", f"local: POST {url} — model={LOCAL_API_MODEL}, {len(messages)} msg(s), tools={len(tools or [])}")
         payload = {
             "model": LOCAL_API_MODEL,
             "messages": messages,
@@ -145,16 +153,19 @@ class LocalTier:
 
         try:
             response = await fetch(
-                f"{LOCAL_API_URL}/v1/chat/completions",
+                url,
                 method="POST",
                 headers={"Content-Type": "application/json"},
                 body=json.dumps(payload),
             )
+            agent_log("tier", f"local: HTTP {response.status} — reading SSE stream")
             if response.status != 200:
                 raise Exception(f"HTTP {response.status}")
             async for delta in parse_openai_sse(response):
                 yield delta
+            agent_log("tier", "local: stream complete")
         except Exception as e:
+            agent_log("error", f"local: {e}")
             yield Delta(text=f"[Local server error: {e}]", finish_reason="stop")
 
 
@@ -166,6 +177,9 @@ class RemoteTier:
     name = "remote"
 
     async def stream_chat(self, messages, tools=None):
+        url = f"{REMOTE_API_URL}/v1/chat/completions"
+        auth = "key set" if REMOTE_API_KEY else "no key (mock)"
+        agent_log("tier", f"remote: POST {url} — model={REMOTE_API_MODEL}, {len(messages)} msg(s), tools={len(tools or [])}, auth={auth}")
         payload = {
             "model": REMOTE_API_MODEL,
             "messages": messages,
@@ -180,16 +194,19 @@ class RemoteTier:
 
         try:
             response = await fetch(
-                f"{REMOTE_API_URL}/v1/chat/completions",
+                url,
                 method="POST",
                 headers=headers,
                 body=json.dumps(payload),
             )
+            agent_log("tier", f"remote: HTTP {response.status} — reading SSE stream")
             if response.status != 200:
                 raise Exception(f"HTTP {response.status}")
             async for delta in parse_openai_sse(response):
                 yield delta
+            agent_log("tier", "remote: stream complete")
         except Exception as e:
+            agent_log("error", f"remote: {e}")
             yield Delta(text=f"[Remote API error: {e}]", finish_reason="stop")
 
 

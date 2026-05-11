@@ -5,6 +5,7 @@ from pyscript import fetch
 
 from config import MCP_SERVER_URL
 from fs_bridge import save_file
+from ui import agent_log
 
 
 # =============================================================================
@@ -41,12 +42,15 @@ async def _call_analyze_csv(arguments: dict) -> dict:
     try:
         import pandas as pd
     except ImportError:
+        agent_log("error", "analyze_csv: pandas not available in this environment")
         return {"content": [{"type": "text", "text": "Pandas not available in this environment."}]}
 
     path = arguments.get("path", "./data/sales.csv")
+    agent_log("tool_pyodide", f"analyze_csv: fetching {path} (Pyodide/Pandas — in-browser)")
     try:
         response = await fetch(path)
         csv_text = await response.text()
+        agent_log("tool_pyodide", f"analyze_csv: loaded {len(csv_text)} bytes — running Pandas")
         df = pd.read_csv(_io.StringIO(csv_text))
 
         rows = len(df)
@@ -69,9 +73,11 @@ async def _call_analyze_csv(arguments: dict) -> dict:
             f"Top product: {top_product} (${top_rev:,.0f}) | "
             f"QoQ growth: {qoq_str}"
         )
+        agent_log("tool_pyodide", f"analyze_csv: done — {summary}")
         return {"content": [{"type": "text", "text": summary}]}
 
     except Exception as e:
+        agent_log("error", f"analyze_csv: failed — {e}")
         return {"content": [{"type": "text", "text": f"CSV analysis failed: {e}"}]}
 
 
@@ -81,12 +87,16 @@ async def _call_analyze_csv(arguments: dict) -> dict:
 
 async def list_tools() -> list:
     """Return MCP tool definitions from the server."""
+    url = f"{MCP_SERVER_URL}/tools"
+    agent_log("mcp", f"list_tools: GET {url}")
     try:
-        response = await fetch(f"{MCP_SERVER_URL}/tools")
+        response = await fetch(url)
         data = await response.json()
-        return data.get("tools", [])
+        tools = data.get("tools", [])
+        agent_log("mcp", f"list_tools: {len(tools)} tool(s) — {', '.join(t['name'] for t in tools)}")
+        return tools
     except Exception as e:
-        print(f"MCP list_tools failed: {e}")
+        agent_log("error", f"list_tools: failed — {e}")
         return []
 
 
@@ -104,18 +114,27 @@ async def call_tool(name: str, arguments: dict) -> dict:
     if name == "save_to_file":
         filename = arguments.get("filename", "notes.md")
         content = arguments.get("content", "")
+        agent_log("tool_pyodide", f"save_to_file: writing '{filename}' via File System Access API ({len(content)} chars)")
         status = await save_file(filename, content)
+        agent_log("tool_pyodide", f"save_to_file: {status}")
         return {"content": [{"type": "text", "text": status}]}
 
+    url = f"{MCP_SERVER_URL}/call-tool"
+    agent_log("mcp", f"call_tool: POST {url} — {name}({json.dumps(arguments)})")
     try:
         response = await fetch(
-            f"{MCP_SERVER_URL}/call-tool",
+            url,
             method="POST",
             headers={"Content-Type": "application/json"},
             body=json.dumps({"name": name, "arguments": arguments}),
         )
-        return await response.json()
+        result = await response.json()
+        texts = [i.get("text", "") for i in result.get("content", []) if i.get("type") == "text"]
+        preview = " ".join(texts)[:120]
+        agent_log("mcp", f"call_tool: {name} → {preview}")
+        return result
     except Exception as e:
+        agent_log("error", f"call_tool {name}: {e}")
         return {"content": [{"type": "text", "text": f"Tool error: {e}"}]}
 
 

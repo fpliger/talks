@@ -14,6 +14,7 @@ Callbacks let callers update the UI as each phase happens:
 import json
 from streaming import Delta, ToolCall
 from tools import call_tool
+from ui import agent_log
 
 
 def _assistant_with_tool_calls(tool_calls: list[ToolCall]) -> dict:
@@ -51,24 +52,36 @@ async def run_agent_loop(
     max_turns: int = 8,
 ):
     """Run the agentic loop until stop or max_turns."""
+    turn_num = 0
     for _ in range(max_turns):
+        turn_num += 1
+        n_msgs = len(messages)
+        agent_log("agent", f"turn {turn_num} — sending {n_msgs} message(s) to {tier.name} LLM")
         on_turn_start()
         collected_tool_calls: list[ToolCall] = []
+        token_count = 0
 
         async for delta in tier.stream_chat(messages, tools):
             if delta.text:
+                token_count += 1
+                if token_count == 1:
+                    agent_log("llm_start", f"first token received from {tier.name}")
                 on_delta(delta.text)
             if delta.tool_call:
                 collected_tool_calls.append(delta.tool_call)
+                agent_log("tool_call", f"LLM requested tool: {delta.tool_call.name}({json.dumps(delta.tool_call.args)})")
             if delta.finish_reason == "stop":
+                agent_log("agent", f"turn {turn_num} complete — finish_reason: stop ({token_count} tokens)")
                 on_turn_end()
                 return
             if delta.finish_reason == "tool_calls":
+                agent_log("agent", f"turn {turn_num} complete — finish_reason: tool_calls ({len(collected_tool_calls)} call(s))")
                 break
 
         on_turn_end()
 
         if not collected_tool_calls:
+            agent_log("agent", "no tool calls and no stop signal — exiting loop")
             return
 
         # Append assistant turn with tool_calls, then execute each tool
@@ -76,11 +89,15 @@ async def run_agent_loop(
 
         for tc in collected_tool_calls:
             on_tool_call(tc)
+            agent_log("tool_call", f"dispatching {tc.name} → args: {json.dumps(tc.args)}")
             result = await call_tool(tc.name, tc.args)
             # Extract text from MCP content array
             result_text = " ".join(
                 item.get("text", "") for item in result.get("content", [])
                 if item.get("type") == "text"
             ) or str(result)
+            preview = result_text[:120] + ("…" if len(result_text) > 120 else "")
+            agent_log("tool_result", f"{tc.name} → {preview}")
             on_tool_result(tc, result_text)
             messages.append(_tool_result_message(tc, result_text))
+        agent_log("agent", f"tool results appended — starting turn {turn_num + 1}")
