@@ -13,7 +13,7 @@ from pyscript import document
 from ui import (
     add_message, clear_messages, update_status,
     add_streaming_message, update_streaming_message, finish_streaming_message,
-    add_tool_call_pill, add_tool_result, get_selected_tier, agent_log,
+    add_tool_call_pill, add_tool_result, get_selected_tier, agent_log, agent_highlight,
 )
 from router import route_request
 from tiers import get_tier
@@ -63,11 +63,15 @@ async def run_demo_1(event=None):
     agent_log("route",  f"keyword match: \"{routing.get('keyword', '')}\" → {routing['reason']}")
     agent_log("tier",   f"inference tier: {tier_name} (no tools — pure LLM call)")
     agent_log("llm_start", f"sending 1 message to {tier_name} LLM")
+    agent_highlight("user", "user-orchestrator")
+    agent_highlight("orchestrator")
+    agent_highlight("llm", "orchestrator-llm")
 
     messages = [{"role": "user", "content": prompt}]
     await _stream_into_bubble(tier, messages, route=tier_name)
 
     agent_log("agent_done", "response complete")
+    agent_highlight("orchestrator")
 
 
 # =============================================================================
@@ -93,6 +97,8 @@ async def run_demo_2(event=None):
     agent_log("route",       f"keyword match: \"{routing.get('keyword', '')}\" → {routing['reason']}")
     agent_log("tier",        f"inference tier: {tier_name} | tool: analyze_csv (pyodide — in-browser Pandas)")
     agent_log("info",        "tool schema sent to LLM — waiting for tool_call decision")
+    agent_highlight("user", "user-orchestrator")
+    agent_highlight("orchestrator")
 
     tools_for_llm = format_tools_for_llm(PYODIDE_TOOLS)
     messages = [
@@ -113,6 +119,8 @@ async def run_demo_2(event=None):
     def on_turn_start():
         current_bubble[0] = add_streaming_message(route=tier_name)
         agent_log("llm_start", f"LLM turn started ({tier_name})")
+        agent_highlight("orchestrator", "orchestrator-llm")
+        agent_highlight("llm")
 
     def on_turn_end():
         if current_bubble[0]:
@@ -127,6 +135,8 @@ async def run_demo_2(event=None):
         add_tool_call_pill(tc)
         if tc.name == "analyze_csv":
             agent_log("tool_pyodide", f"tool_call → {tc.name}({tc.args}) — dispatching to Pyodide")
+            agent_highlight("orchestrator", "orchestrator-pyodide")
+            agent_highlight("pyodide")
         else:
             agent_log("tool_call", f"tool_call → {tc.name}({tc.args})")
 
@@ -136,6 +146,8 @@ async def run_demo_2(event=None):
         if tc.name == "analyze_csv":
             agent_log("tool_result", f"pyodide result: {preview}")
             agent_log("llm_start",   "tool result appended to context — LLM generating narrative")
+            agent_highlight("pyodide")
+            agent_highlight("orchestrator")
         else:
             agent_log("tool_result", f"result from {tc.name}: {preview}")
 
@@ -151,6 +163,7 @@ async def run_demo_2(event=None):
     )
 
     agent_log("agent_done", "agent loop complete")
+    agent_highlight("orchestrator")
 
 
 # =============================================================================
@@ -182,6 +195,8 @@ async def run_demo_3(event=None):
     agent_log("tier",      f"inference tier: {tier_name} | transport: MCP over HTTP (localhost:8765)")
     agent_log("info",      f"tools discovered: {', '.join(tool_names)}")
     agent_log("info",      "tool schemas sent to LLM — waiting for tool_call decision")
+    agent_highlight("user", "user-orchestrator")
+    agent_highlight("orchestrator")
 
     tools_for_llm = format_tools_for_llm(mcp_tools)
     messages = [
@@ -202,6 +217,8 @@ async def run_demo_3(event=None):
     def on_turn_start():
         current_bubble[0] = add_streaming_message(route=tier_name)
         agent_log("llm_start", f"LLM turn started ({tier_name})")
+        agent_highlight("orchestrator", "orchestrator-llm")
+        agent_highlight("llm")
 
     def on_turn_end():
         if current_bubble[0]:
@@ -215,12 +232,16 @@ async def run_demo_3(event=None):
     def on_tool_call(tc):
         add_tool_call_pill(tc)
         agent_log("tool_call", f"tool_call → {tc.name}({tc.args}) — dispatching to MCP HTTP server")
+        agent_highlight("orchestrator", "orchestrator-mcp")
+        agent_highlight("mcp")
 
     def on_tool_result(tc, result_text):
         add_tool_result(tc, result_text)
         preview = result_text[:80] + ("…" if len(result_text) > 80 else "")
         agent_log("tool_result", f"mcp result from {tc.name}: {preview}")
         agent_log("llm_start",   "tool result appended to context — continuing agent loop")
+        agent_highlight("mcp")
+        agent_highlight("orchestrator")
 
     await run_agent_loop(
         tier=tier,
@@ -234,6 +255,7 @@ async def run_demo_3(event=None):
     )
 
     agent_log("agent_done", "agent loop complete")
+    agent_highlight("orchestrator")
 
 
 # =============================================================================

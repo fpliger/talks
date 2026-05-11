@@ -131,6 +131,15 @@ def agent_log(type: str, text: str):
         pass
 
 
+def agent_highlight(node: str, edge: str = ""):
+    """Light up a node (and optionally an edge) in the arch diagram."""
+    from pyscript import window
+    try:
+        window.agentHighlight(node, edge or None)
+    except Exception:
+        pass
+
+
 def update_status(status, text):
     label = document.getElementById("local-status-text")
     if label:

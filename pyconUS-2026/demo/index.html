@@ -223,18 +223,27 @@
         }
         .log-indicator.active { background: var(--local-color); animation: pulse 1s ease-in-out infinite; }
 
-        /* ── SIDE LOG PANEL ─────────────────────────────── */
-        .log-panel {
+        /* ── RIGHT COLUMN (log + arch diagram) ──────────── */
+        .right-col {
             display: none;
             flex-direction: column;
             flex: 1 1 0;
             min-width: 0;
+            gap: .5rem;
+        }
+        .right-col.open { display: flex; }
+
+        /* ── SIDE LOG PANEL ─────────────────────────────── */
+        .log-panel {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 0;
+            min-height: 0;
             background: var(--code-bg);
             border: 1px solid var(--border);
             border-radius: 10px;
             overflow: hidden;
         }
-        .log-panel.open { display: flex; }
         .log-header {
             display: flex;
             align-items: center;
@@ -257,8 +266,77 @@
             flex: 1;
             overflow-y: auto;
             padding: .4rem .6rem;
+            min-height: 0;
         }
-        /* fill viewport from top of main-area to fixed footer */
+
+        /* ── ARCH DIAGRAM PANEL ──────────────────────────── */
+        .arch-panel {
+            flex: 1 1 0;
+            min-height: 0;
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .arch-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: .45rem .75rem;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .75rem;
+            color: var(--muted);
+            font-weight: 500;
+            letter-spacing: .03em;
+        }
+        .arch-body {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: .75rem;
+            min-height: 0;
+        }
+        .arch-body svg { width: 100%; height: 100%; }
+
+        /* arch node base */
+        .arch-node rect, .arch-node path {
+            transition: fill .2s, filter .2s, stroke .2s;
+        }
+        .arch-node text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            fill: var(--muted);
+            transition: fill .2s;
+            pointer-events: none;
+        }
+        .arch-node .node-sub {
+            font-size: 9px;
+            fill: #4a5060;
+        }
+
+        /* lit state — each node type uses its own color */
+        .arch-node.lit-llm rect        { fill: color-mix(in srgb, var(--remote-color) 18%, var(--code-bg)); stroke: var(--remote-color) !important; filter: drop-shadow(0 0 6px var(--remote-color)); }
+        .arch-node.lit-llm text        { fill: var(--remote-color); }
+        .arch-node.lit-orchestrator rect { fill: color-mix(in srgb, var(--local-color) 18%, var(--code-bg)); stroke: var(--local-color) !important; filter: drop-shadow(0 0 6px var(--local-color)); }
+        .arch-node.lit-orchestrator text { fill: var(--local-color); }
+        .arch-node.lit-pyodide rect    { fill: color-mix(in srgb, #a78bfa 18%, var(--code-bg)); stroke: #a78bfa !important; filter: drop-shadow(0 0 6px #a78bfa); }
+        .arch-node.lit-pyodide text    { fill: #a78bfa; }
+        .arch-node.lit-mcp rect        { fill: color-mix(in srgb, var(--tool-color) 18%, var(--code-bg)); stroke: var(--tool-color) !important; filter: drop-shadow(0 0 6px var(--tool-color)); }
+        .arch-node.lit-mcp text        { fill: var(--tool-color); }
+        .arch-node.lit-user rect       { fill: color-mix(in srgb, #b3c8ff 18%, var(--code-bg)); stroke: #b3c8ff !important; filter: drop-shadow(0 0 6px #b3c8ff); }
+        .arch-node.lit-user text       { fill: #b3c8ff; }
+
+        /* edge arrows */
+        .arch-edge { stroke: var(--border); stroke-width: 1.5; fill: none; marker-end: url(#arrow); transition: stroke .2s; }
+        .arch-edge.lit { stroke: var(--local-color); animation: edge-pulse 1s ease forwards; }
+        @keyframes edge-pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+
+        /* fill viewport */
         .main-area {
             height: calc(100vh - var(--main-top) - 2.5rem);
         }
@@ -272,8 +350,6 @@
             min-height: 0;
             max-height: none;
         }
-        .log-panel { min-height: 0; }
-        .log-body  { flex: 1; max-height: none; }
 
         .log-entry {
             display: flex;
@@ -789,22 +865,107 @@
             </div>
         </div>
 
-        <!-- Log toggle tab (vertical pill on the right edge of chat) -->
-        <div class="log-tab" id="log-tab" onclick="toggleLog()" title="Toggle agent log">
+        <!-- Log toggle tab -->
+        <div class="log-tab" id="log-tab" onclick="toggleLog()" title="Toggle agent panel">
             <span class="log-indicator" id="log-indicator"></span>
             <span class="log-tab-label">agent log</span>
         </div>
 
-        <!-- Side log panel (shown alongside chat when active) -->
-        <div class="log-panel" id="log-panel">
-            <div class="log-header">
-                <div class="log-header-left">
-                    <span class="log-indicator" id="log-indicator-2"></span>
-                    Agent log
+        <!-- Right column: log + arch diagram -->
+        <div class="right-col" id="right-col">
+
+            <!-- Log panel (top half) -->
+            <div class="log-panel" id="log-panel">
+                <div class="log-header">
+                    <div class="log-header-left">
+                        <span class="log-indicator" id="log-indicator-2"></span>
+                        Agent log
+                    </div>
+                    <button class="log-clear-btn" onclick="clearLog()">clear</button>
                 </div>
-                <button class="log-clear-btn" onclick="clearLog()">clear</button>
+                <div class="log-body" id="log-body"></div>
             </div>
-            <div class="log-body" id="log-body"></div>
+
+            <!-- Architecture diagram (bottom half) -->
+            <div class="arch-panel">
+                <div class="arch-header">Agent architecture</div>
+                <div class="arch-body">
+                    <svg viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                                <path d="M0,0 L0,6 L8,3 z" fill="#2a2d36"/>
+                            </marker>
+                            <marker id="arrow-lit" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                                <path d="M0,0 L0,6 L8,3 z" fill="#69f0ae"/>
+                            </marker>
+                        </defs>
+
+                        <!-- User -->
+                        <g class="arch-node" id="arch-user">
+                            <rect x="150" y="4" width="100" height="34" rx="6"
+                                  fill="#11131a" stroke="#2a2d36" stroke-width="1.5"/>
+                            <text x="200" y="18" text-anchor="middle" dy=".35em">User</text>
+                            <text x="200" y="30" text-anchor="middle" class="node-sub">prompt</text>
+                        </g>
+
+                        <!-- arrow: user → orchestrator -->
+                        <line class="arch-edge" id="edge-user-orch" x1="200" y1="38" x2="200" y2="58"/>
+
+                        <!-- Orchestrator -->
+                        <g class="arch-node" id="arch-orchestrator">
+                            <rect x="100" y="60" width="200" height="40" rx="6"
+                                  fill="#11131a" stroke="#2a2d36" stroke-width="1.5"/>
+                            <text x="200" y="75" text-anchor="middle" dy=".35em">Orchestrator</text>
+                            <text x="200" y="89" text-anchor="middle" class="node-sub">PyScript · agent loop</text>
+                        </g>
+
+                        <!-- arrow: orchestrator → LLM -->
+                        <line class="arch-edge" id="edge-orch-llm" x1="148" y1="100" x2="65" y2="128"/>
+                        <!-- arrow: orchestrator → pyodide -->
+                        <line class="arch-edge" id="edge-orch-pyodide" x1="200" y1="100" x2="200" y2="128"/>
+                        <!-- arrow: orchestrator → mcp -->
+                        <line class="arch-edge" id="edge-orch-mcp" x1="252" y1="100" x2="335" y2="128"/>
+
+                        <!-- LLM node -->
+                        <g class="arch-node" id="arch-llm">
+                            <rect x="5" y="130" width="120" height="46" rx="6"
+                                  fill="#11131a" stroke="#2a2d36" stroke-width="1.5"/>
+                            <text x="65" y="148" text-anchor="middle" dy=".35em">LLM</text>
+                            <text x="65" y="163" text-anchor="middle" class="node-sub">browser · local · remote</text>
+                        </g>
+
+                        <!-- Pyodide tool node -->
+                        <g class="arch-node" id="arch-pyodide">
+                            <rect x="140" y="130" width="120" height="46" rx="6"
+                                  fill="#11131a" stroke="#2a2d36" stroke-width="1.5"/>
+                            <text x="200" y="148" text-anchor="middle" dy=".35em">Pyodide tool</text>
+                            <text x="200" y="163" text-anchor="middle" class="node-sub">analyze_csv · Pandas</text>
+                        </g>
+
+                        <!-- MCP tools node -->
+                        <g class="arch-node" id="arch-mcp">
+                            <rect x="275" y="130" width="120" height="46" rx="6"
+                                  fill="#11131a" stroke="#2a2d36" stroke-width="1.5"/>
+                            <text x="335" y="148" text-anchor="middle" dy=".35em">MCP tools</text>
+                            <text x="335" y="163" text-anchor="middle" class="node-sub">web_search · save_to_file</text>
+                        </g>
+
+                        <!-- context window dashed arc -->
+                        <path class="arch-edge" id="edge-llm-orch"
+                              d="M 65,176 Q 65,200 200,205 Q 335,200 335,176"
+                              marker-end="none" stroke-dasharray="3,3" opacity=".4"/>
+
+                        <!-- Context window label -->
+                        <rect x="110" y="198" width="180" height="18" rx="4"
+                              fill="#161920" stroke="#2a2d36" stroke-width="1"/>
+                        <text x="200" y="207" text-anchor="middle" dy=".35em"
+                              style="font-family:'JetBrains Mono',monospace;font-size:8px;fill:#3a3f52;">
+                            context window (messages[])
+                        </text>
+                    </svg>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -986,12 +1147,51 @@
         };
 
         function toggleLog() {
-            const panel = document.getElementById('log-panel');
-            const tab   = document.getElementById('log-tab');
-            const open  = panel.classList.toggle('open');
+            const col  = document.getElementById('right-col');
+            const tab  = document.getElementById('log-tab');
+            const open = col.classList.toggle('open');
             tab.classList.toggle('active', open);
             document.body.classList.toggle('log-open', open);
         }
+
+        // ── Arch diagram highlight ───────────────────────────
+        // node: 'user' | 'orchestrator' | 'llm' | 'pyodide' | 'mcp'
+        // type: 'lit-user' | 'lit-orchestrator' | 'lit-llm' | 'lit-pyodide' | 'lit-mcp'
+        const ARCH_LIT = {
+            user:         'lit-user',
+            orchestrator: 'lit-orchestrator',
+            llm:          'lit-llm',
+            pyodide:      'lit-pyodide',
+            mcp:          'lit-mcp',
+        };
+        const ARCH_EDGES = {
+            'user-orchestrator': 'edge-user-orch',
+            'orchestrator-llm':  'edge-orch-llm',
+            'orchestrator-pyodide': 'edge-orch-pyodide',
+            'orchestrator-mcp':  'edge-orch-mcp',
+        };
+        const _litTimers = {};
+
+        window.agentHighlight = (node, edgeKey) => {
+            // Highlight the node
+            const el = document.getElementById(`arch-${node}`);
+            if (el) {
+                const cls = ARCH_LIT[node] || 'lit-orchestrator';
+                el.classList.add(cls);
+                clearTimeout(_litTimers[node]);
+                _litTimers[node] = setTimeout(() => el.classList.remove(cls), 1800);
+            }
+            // Optionally highlight an edge
+            if (edgeKey) {
+                const edgeId = ARCH_EDGES[edgeKey];
+                const edge = edgeId && document.getElementById(edgeId);
+                if (edge) {
+                    edge.classList.add('lit');
+                    clearTimeout(_litTimers[edgeKey]);
+                    _litTimers[edgeKey] = setTimeout(() => edge.classList.remove('lit'), 1000);
+                }
+            }
+        };
 
         function clearLog() {
             document.getElementById('log-body').innerHTML = '';
