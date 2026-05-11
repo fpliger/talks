@@ -122,6 +122,15 @@ def clear_messages():
 # STATUS BAR
 # =============================================================================
 
+def agent_log(type: str, text: str):
+    """Append an entry to the on-page agent log panel."""
+    from pyscript import window
+    try:
+        window.agentLog(type, text)
+    except Exception:
+        pass
+
+
 def update_status(status, text):
     label = document.getElementById("local-status-text")
     if label:

@@ -164,6 +164,96 @@
         .demo-btn small { display: block; font-size: .78rem; opacity: .65; margin-top: .2rem; font-weight: 400; }
         .demo-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
 
+        /* ── AGENT LOG PANEL ────────────────────────────── */
+        .log-panel {
+            margin-top: .75rem;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--code-bg);
+            overflow: hidden;
+        }
+        .log-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: .45rem .85rem;
+            cursor: pointer;
+            user-select: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color .2s;
+        }
+        .log-panel.open .log-header {
+            border-bottom-color: var(--border);
+        }
+        .log-header-left {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .78rem;
+            color: var(--muted);
+            font-weight: 500;
+            letter-spacing: .03em;
+        }
+        .log-indicator {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: var(--border);
+            transition: background .3s;
+            flex-shrink: 0;
+        }
+        .log-indicator.active { background: var(--local-color); animation: pulse 1s ease-in-out infinite; }
+        .log-chevron {
+            font-size: .7rem;
+            color: var(--muted);
+            transition: transform .2s;
+        }
+        .log-panel.open .log-chevron { transform: rotate(180deg); }
+        .log-body {
+            display: none;
+            height: 160px;
+            overflow-y: auto;
+            padding: .5rem .75rem;
+        }
+        .log-panel.open .log-body { display: block; }
+        .log-entry {
+            display: flex;
+            gap: .6rem;
+            align-items: baseline;
+            padding: .15rem 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .74rem;
+            line-height: 1.5;
+            border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+        }
+        .log-entry:last-child { border-bottom: none; }
+        .log-ts {
+            color: var(--muted);
+            flex-shrink: 0;
+            font-size: .68rem;
+        }
+        .log-icon { flex-shrink: 0; }
+        .log-text { color: var(--text); word-break: break-word; }
+        .log-text .hl-tier-in-browser { color: var(--browser-color); font-weight: 600; }
+        .log-text .hl-tier-local      { color: var(--local-color);   font-weight: 600; }
+        .log-text .hl-tier-remote     { color: var(--remote-color);  font-weight: 600; }
+        .log-text .hl-pyodide         { color: #a78bfa;              font-weight: 600; }
+        .log-text .hl-mcp             { color: var(--tool-color);    font-weight: 600; }
+        .log-text .hl-ok              { color: var(--local-color); }
+        .log-text .hl-err             { color: #ef5350; }
+        .log-clear-btn {
+            font-size: .68rem;
+            padding: .1rem .45rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--muted);
+            cursor: pointer;
+            font-family: 'JetBrains Mono', monospace;
+            transition: border-color .15s, color .15s;
+        }
+        .log-clear-btn:hover { border-color: var(--text); color: var(--text); }
+
         /* ── ROUTING ANIMATION ──────────────────────────── */
         .routing-viz {
             display: grid;
@@ -704,6 +794,21 @@
         </div>
     </div>
 
+    <!-- Agent log panel -->
+    <div class="log-panel open" id="log-panel">
+        <div class="log-header" onclick="toggleLog()">
+            <div class="log-header-left">
+                <span class="log-indicator" id="log-indicator"></span>
+                Agent log
+            </div>
+            <div style="display:flex;align-items:center;gap:.6rem;">
+                <button class="log-clear-btn" onclick="event.stopPropagation();clearLog()">clear</button>
+                <span class="log-chevron">▼</span>
+            </div>
+        </div>
+        <div class="log-body" id="log-body"></div>
+    </div>
+
     <script>
         // ── Tier selection state ─────────────────────────────
         let _selectedTier = 'in-browser';
@@ -816,6 +921,65 @@
                         `<div class="live-metric-row"><span class="lm-label">Cold start (snapshot)</span><span class="lm-value">${s.start_times?.cold_s ?? '—'}s</span></div>`;
                 }
             } catch { /* snapshot optional */ }
+        }
+
+        // ── Agent log ────────────────────────────────────────
+        const LOG_ICONS = {
+            route:      '🔀',
+            tier:       '⚙️',
+            llm_start:  '🤖',
+            llm_end:    '✅',
+            tool_call:  '🔧',
+            tool_pyodide: '🐍',
+            tool_result:'📥',
+            agent_done: '🏁',
+            error:      '❌',
+            info:       'ℹ️',
+        };
+
+        function _logTs() {
+            const d = new Date();
+            return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}.${String(d.getMilliseconds()).padStart(3,'0')}`;
+        }
+
+        function _highlightLog(text) {
+            return text
+                .replace(/\b(in-browser)\b/gi, '<span class="hl-tier-in-browser">$1</span>')
+                .replace(/\b(local)\b/gi,      '<span class="hl-tier-local">$1</span>')
+                .replace(/\b(remote)\b/gi,     '<span class="hl-tier-remote">$1</span>')
+                .replace(/\b(pyodide|analyze_csv)\b/gi, '<span class="hl-pyodide">$1</span>')
+                .replace(/\b(mcp|web_search|save_to_file)\b/gi, '<span class="hl-mcp">$1</span>')
+                .replace(/\b(ok|success|done|ready)\b/gi,  '<span class="hl-ok">$1</span>')
+                .replace(/\b(error|failed|err)\b/gi,       '<span class="hl-err">$1</span>');
+        }
+
+        let _logActive = false;
+        window.agentLog = (type, text) => {
+            const body = document.getElementById('log-body');
+            const indicator = document.getElementById('log-indicator');
+            if (!body) return;
+
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML =
+                `<span class="log-ts">${_logTs()}</span>` +
+                `<span class="log-icon">${LOG_ICONS[type] || 'ℹ️'}</span>` +
+                `<span class="log-text">${_highlightLog(text)}</span>`;
+            body.appendChild(entry);
+            body.scrollTop = body.scrollHeight;
+
+            // Pulse indicator while active
+            indicator.classList.add('active');
+            clearTimeout(indicator._t);
+            indicator._t = setTimeout(() => indicator.classList.remove('active'), 800);
+        };
+
+        function toggleLog() {
+            document.getElementById('log-panel').classList.toggle('open');
+        }
+
+        function clearLog() {
+            document.getElementById('log-body').innerHTML = '';
         }
 
         // ── Metrics strip ────────────────────────────────────

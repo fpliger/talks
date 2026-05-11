@@ -13,7 +13,7 @@ from pyscript import document
 from ui import (
     add_message, clear_messages, update_status,
     add_streaming_message, update_streaming_message, finish_streaming_message,
-    add_tool_call_pill, add_tool_result, get_selected_tier,
+    add_tool_call_pill, add_tool_result, get_selected_tier, agent_log,
 )
 from router import route_request
 from tiers import get_tier
@@ -60,8 +60,14 @@ async def run_demo_1(event=None):
     from pyscript import window as _win
     _win.animateRoute(tier_name, routing.get("keyword", "date"))
 
+    agent_log("route",  f"keyword match: \"{routing.get('keyword', '')}\" → {routing['reason']}")
+    agent_log("tier",   f"inference tier: {tier_name} (no tools — pure LLM call)")
+    agent_log("llm_start", f"sending 1 message to {tier_name} LLM")
+
     messages = [{"role": "user", "content": prompt}]
     await _stream_into_bubble(tier, messages, route=tier_name)
+
+    agent_log("agent_done", "response complete")
 
 
 # =============================================================================
@@ -84,6 +90,10 @@ async def run_demo_2(event=None):
     from pyscript import window as _win
     _win.animateRoute(tier_name, "CSV")
 
+    agent_log("route",       f"keyword match: \"{routing.get('keyword', '')}\" → {routing['reason']}")
+    agent_log("tier",        f"inference tier: {tier_name} | tool: analyze_csv (pyodide — in-browser Pandas)")
+    agent_log("info",        "tool schema sent to LLM — waiting for tool_call decision")
+
     tools_for_llm = format_tools_for_llm(PYODIDE_TOOLS)
     messages = [
         {
@@ -102,6 +112,7 @@ async def run_demo_2(event=None):
 
     def on_turn_start():
         current_bubble[0] = add_streaming_message(route=tier_name)
+        agent_log("llm_start", f"LLM turn started ({tier_name})")
 
     def on_turn_end():
         if current_bubble[0]:
@@ -114,9 +125,19 @@ async def run_demo_2(event=None):
 
     def on_tool_call(tc):
         add_tool_call_pill(tc)
+        if tc.name == "analyze_csv":
+            agent_log("tool_pyodide", f"tool_call → {tc.name}({tc.args}) — dispatching to Pyodide")
+        else:
+            agent_log("tool_call", f"tool_call → {tc.name}({tc.args})")
 
     def on_tool_result(tc, result_text):
         add_tool_result(tc, result_text)
+        preview = result_text[:80] + ("…" if len(result_text) > 80 else "")
+        if tc.name == "analyze_csv":
+            agent_log("tool_result", f"pyodide result: {preview}")
+            agent_log("llm_start",   "tool result appended to context — LLM generating narrative")
+        else:
+            agent_log("tool_result", f"result from {tc.name}: {preview}")
 
     await run_agent_loop(
         tier=tier,
@@ -128,6 +149,8 @@ async def run_demo_2(event=None):
         on_turn_start=on_turn_start,
         on_turn_end=on_turn_end,
     )
+
+    agent_log("agent_done", "agent loop complete")
 
 
 # =============================================================================
@@ -155,6 +178,11 @@ async def run_demo_3(event=None):
     tool_names = [t["name"] for t in mcp_tools] if mcp_tools else ["(none found)"]
     add_message(f"<em>MCP tools available: {', '.join(tool_names)}</em>", role="system")
 
+    agent_log("route",     f"keyword match: \"{routing.get('keyword', '')}\" → {routing['reason']}")
+    agent_log("tier",      f"inference tier: {tier_name} | transport: MCP over HTTP (localhost:8765)")
+    agent_log("info",      f"tools discovered: {', '.join(tool_names)}")
+    agent_log("info",      "tool schemas sent to LLM — waiting for tool_call decision")
+
     tools_for_llm = format_tools_for_llm(mcp_tools)
     messages = [
         {
@@ -169,11 +197,11 @@ async def run_demo_3(event=None):
         {"role": "user", "content": prompt},
     ]
 
-    # Streaming bubble state — held across turns
     current_bubble = [None]
 
     def on_turn_start():
         current_bubble[0] = add_streaming_message(route=tier_name)
+        agent_log("llm_start", f"LLM turn started ({tier_name})")
 
     def on_turn_end():
         if current_bubble[0]:
@@ -186,9 +214,13 @@ async def run_demo_3(event=None):
 
     def on_tool_call(tc):
         add_tool_call_pill(tc)
+        agent_log("tool_call", f"tool_call → {tc.name}({tc.args}) — dispatching to MCP HTTP server")
 
     def on_tool_result(tc, result_text):
         add_tool_result(tc, result_text)
+        preview = result_text[:80] + ("…" if len(result_text) > 80 else "")
+        agent_log("tool_result", f"mcp result from {tc.name}: {preview}")
+        agent_log("llm_start",   "tool result appended to context — continuing agent loop")
 
     await run_agent_loop(
         tier=tier,
@@ -200,6 +232,8 @@ async def run_demo_3(event=None):
         on_turn_start=on_turn_start,
         on_turn_end=on_turn_end,
     )
+
+    agent_log("agent_done", "agent loop complete")
 
 
 # =============================================================================
@@ -237,6 +271,7 @@ async def handle_keydown(event):
 
 print("Router Demo — PyCon US 2026")
 update_status("", "In-browser: Not loaded")
+agent_log("info", "PyScript + Pyodide ready — Python running in the browser")
 
 async def _prewarm():
     """Background pre-warm of WebLLM so Demo 1 in-browser is fast on stage."""
