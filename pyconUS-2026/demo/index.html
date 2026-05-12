@@ -284,7 +284,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: .45rem .75rem;
+            padding: .35rem .75rem;
             border-bottom: 1px solid var(--border);
             flex-shrink: 0;
             font-family: 'JetBrains Mono', monospace;
@@ -292,16 +292,135 @@
             color: var(--muted);
             font-weight: 500;
             letter-spacing: .03em;
+            gap: .5rem;
         }
+        .arch-tabs {
+            display: flex;
+            gap: .2rem;
+        }
+        .arch-tab {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .68rem;
+            font-weight: 500;
+            color: var(--muted);
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            padding: .2rem .5rem;
+            cursor: pointer;
+            letter-spacing: .03em;
+            transition: color .15s, border-color .15s, background .15s;
+        }
+        .arch-tab:hover { color: var(--text); border-color: var(--border); }
+        .arch-tab.active { color: var(--local-color); border-color: var(--local-color); background: color-mix(in srgb, var(--local-color) 10%, transparent); }
         .arch-body {
             flex: 1;
             display: flex;
-            align-items: center;
+            align-items: stretch;
             justify-content: center;
-            padding: .75rem;
+            padding: 0;
             min-height: 0;
+            position: relative;
         }
-        .arch-body svg { width: 100%; height: 100%; }
+        .arch-pane {
+            position: absolute;
+            inset: 0;
+            display: none;
+            overflow: hidden;
+        }
+        .arch-pane.active { display: flex; align-items: center; justify-content: center; }
+        #arch-pane-diagram { padding: .75rem; }
+        #arch-pane-diagram svg { width: 100%; height: 100%; }
+        #arch-pane-context, #arch-pane-calls {
+            flex-direction: column;
+            align-items: stretch;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .7rem;
+            overflow-y: auto;
+            padding: .5rem .65rem;
+            gap: .5rem;
+        }
+        .arch-debug-empty {
+            color: #3a3f52;
+            font-size: .72rem;
+            text-align: center;
+            margin: auto;
+        }
+        /* Context view */
+        .ctx-msg {
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .ctx-msg-header {
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+            padding: .25rem .5rem;
+            background: #161920;
+            border-bottom: 1px solid var(--border);
+            font-size: .68rem;
+            cursor: pointer;
+            user-select: none;
+        }
+        .ctx-msg-role {
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            font-size: .63rem;
+        }
+        .ctx-msg-role.role-user       { color: #b3c8ff; }
+        .ctx-msg-role.role-assistant  { color: var(--local-color); }
+        .ctx-msg-role.role-system     { color: var(--muted); }
+        .ctx-msg-role.role-tool       { color: var(--tool-color); }
+        .ctx-msg-body {
+            padding: .4rem .5rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+            color: var(--text);
+            line-height: 1.4;
+            max-height: 140px;
+            overflow-y: auto;
+        }
+        /* Calls view */
+        .call-entry {
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .call-entry-header {
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+            padding: .25rem .5rem;
+            background: #161920;
+            border-bottom: 1px solid var(--border);
+            font-size: .68rem;
+            cursor: pointer;
+            user-select: none;
+        }
+        .call-badge {
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            font-size: .6rem;
+            padding: .1em .35em;
+            border-radius: 3px;
+        }
+        .call-badge.req { background: color-mix(in srgb, var(--remote-color) 15%, transparent); color: var(--remote-color); border: 1px solid var(--remote-color); }
+        .call-badge.res { background: color-mix(in srgb, var(--local-color) 15%, transparent); color: var(--local-color); border: 1px solid var(--local-color); }
+        .call-entry-body {
+            padding: .4rem .5rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+            color: var(--text);
+            font-size: .67rem;
+            line-height: 1.35;
+            max-height: 160px;
+            overflow-y: auto;
+        }
 
         /* arch node base */
         .arch-node rect, .arch-node path {
@@ -384,6 +503,84 @@
             transition: border-color .15s, color .15s;
         }
         .log-clear-btn:hover { border-color: var(--text); color: var(--text); }
+
+        /* ── STEP MODE TOGGLE ──────────────────────────────── */
+        .step-toggle {
+            display: flex;
+            align-items: center;
+            gap: .35rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .65rem;
+            color: var(--muted);
+            cursor: pointer;
+            user-select: none;
+        }
+        .step-toggle input[type=checkbox] { display: none; }
+        .step-toggle-pill {
+            width: 28px; height: 14px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            position: relative;
+            transition: background .2s, border-color .2s;
+            flex-shrink: 0;
+        }
+        .step-toggle-pill::after {
+            content: '';
+            position: absolute;
+            top: 2px; left: 2px;
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--muted);
+            transition: transform .2s, background .2s;
+        }
+        .step-toggle input:checked ~ .step-toggle-pill {
+            background: color-mix(in srgb, #f59e0b 25%, var(--surface2));
+            border-color: #f59e0b;
+        }
+        .step-toggle input:checked ~ .step-toggle-pill::after {
+            transform: translateX(14px);
+            background: #f59e0b;
+        }
+        .step-toggle input:checked ~ .step-toggle-label { color: #f59e0b; }
+
+        /* ── STEP PAUSED BANNER ────────────────────────────── */
+        .step-paused-bar {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            padding: .4rem .75rem;
+            background: color-mix(in srgb, #f59e0b 12%, var(--code-bg));
+            border-top: 1px solid #f59e0b55;
+            flex-shrink: 0;
+            gap: .5rem;
+        }
+        .step-paused-bar.visible { display: flex; }
+        .step-paused-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .68rem;
+            color: #f59e0b;
+            flex: 1;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+        .step-next-btn {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .7rem;
+            padding: .2rem .65rem;
+            background: #f59e0b;
+            color: #0d0f14;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 700;
+            flex-shrink: 0;
+            transition: opacity .15s;
+        }
+        .step-next-btn:hover { opacity: .85; }
+        /* log entry for step events */
+        .log-entry.step-entry { background: color-mix(in srgb, #f59e0b 6%, transparent); }
 
         /* ── ROUTING ANIMATION (on tier buttons) ──────────── */
         .tier-btn {
@@ -881,15 +1078,35 @@
                         <span class="log-indicator" id="log-indicator-2"></span>
                         Agent log
                     </div>
-                    <button class="log-clear-btn" onclick="clearLog()">clear</button>
+                    <div style="display:flex;align-items:center;gap:.6rem;">
+                        <label class="step-toggle" title="Pause at each agent boundary for step-through debugging">
+                            <input type="checkbox" id="step-mode-chk" onchange="toggleStepMode(this.checked)">
+                            <span class="step-toggle-pill"></span>
+                            <span class="step-toggle-label">step</span>
+                        </label>
+                        <button class="log-clear-btn" onclick="clearLog()">clear</button>
+                    </div>
                 </div>
                 <div class="log-body" id="log-body"></div>
+                <div class="step-paused-bar" id="step-paused-bar">
+                    <span class="step-paused-label" id="step-paused-label">⏸ paused</span>
+                    <button class="step-next-btn" onclick="stepResume()">▶ next step</button>
+                </div>
             </div>
 
             <!-- Architecture diagram (bottom half) -->
             <div class="arch-panel">
-                <div class="arch-header">Agent architecture</div>
+                <div class="arch-header">
+                    <span>Agent</span>
+                    <div class="arch-tabs">
+                        <button class="arch-tab active" onclick="archSetView('diagram')">Architecture</button>
+                        <button class="arch-tab" onclick="archSetView('context')">Context</button>
+                        <button class="arch-tab" onclick="archSetView('calls')">Calls</button>
+                    </div>
+                </div>
                 <div class="arch-body">
+                    <!-- Diagram pane -->
+                    <div id="arch-pane-diagram" class="arch-pane active">
                     <svg viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg">
                         <defs>
                             <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
@@ -963,6 +1180,18 @@
                             context window (messages[])
                         </text>
                     </svg>
+                    </div><!-- /arch-pane-diagram -->
+
+                    <!-- Context pane -->
+                    <div id="arch-pane-context" class="arch-pane">
+                        <div class="arch-debug-empty" id="ctx-empty">No context yet — run a demo to see messages[]</div>
+                    </div>
+
+                    <!-- Calls pane -->
+                    <div id="arch-pane-calls" class="arch-pane">
+                        <div class="arch-debug-empty" id="calls-empty">No API calls yet — run a demo to capture requests &amp; responses</div>
+                    </div>
+
                 </div>
             </div>
 
@@ -1103,6 +1332,7 @@
             tool_result:  '📥',
             mcp:          '🌐',
             agent_done:   '🏁',
+            step:         '⏸',
             error:        '❌',
             info:         'ℹ️',
         };
@@ -1142,7 +1372,7 @@
             if (!body) return;
 
             const entry = document.createElement('div');
-            entry.className = 'log-entry';
+            entry.className = 'log-entry' + (type === 'step' ? ' step-entry' : '');
             entry.innerHTML =
                 `<span class="log-ts">${_logTs()}</span>` +
                 `<span class="log-icon">${LOG_ICONS[type] || 'ℹ️'}</span>` +
@@ -1151,6 +1381,31 @@
             body.scrollTop = body.scrollHeight;
             _pulseIndicators();
         };
+
+        // ── Step mode ────────────────────────────────────────
+        window.agentStepMode = false;
+
+        function toggleStepMode(on) {
+            window.agentStepMode = on;
+            if (!on) {
+                // If a pause is pending, release it when the user turns off step mode
+                stepResume();
+            }
+        }
+
+        window.agentPaused = (label) => {
+            const bar   = document.getElementById('step-paused-bar');
+            const lbl   = document.getElementById('step-paused-label');
+            if (bar) bar.classList.add('visible');
+            if (lbl) lbl.textContent = `⏸  ${label}`;
+        };
+
+        function stepResume() {
+            const bar = document.getElementById('step-paused-bar');
+            if (bar) bar.classList.remove('visible');
+            // Call back into Python
+            if (window.agentResumeStep) window.agentResumeStep();
+        }
 
         function toggleLog() {
             const col  = document.getElementById('right-col');
@@ -1178,16 +1433,36 @@
         };
         const _litTimers = {};
 
-        window.agentHighlight = (node, edgeKey) => {
-            // Highlight the node
+        // Activate a node and hold it lit until agentDeactivate is called.
+        window.agentActivate = (node) => {
             const el = document.getElementById(`arch-${node}`);
-            if (el) {
-                const cls = ARCH_LIT[node] || 'lit-orchestrator';
-                el.classList.add(cls);
-                clearTimeout(_litTimers[node]);
-                _litTimers[node] = setTimeout(() => el.classList.remove(cls), 1800);
+            if (!el) return;
+            const cls = ARCH_LIT[node] || 'lit-orchestrator';
+            clearTimeout(_litTimers[node]);   // cancel any pending auto-remove
+            el.classList.add(cls);
+        };
+
+        // Remove the persistent lit state from a node.
+        window.agentDeactivate = (node) => {
+            const el = document.getElementById(`arch-${node}`);
+            if (!el) return;
+            const cls = ARCH_LIT[node] || 'lit-orchestrator';
+            el.classList.remove(cls);
+        };
+
+        // Pulse an edge briefly (and optionally flash a node once).
+        window.agentHighlight = (node, edgeKey) => {
+            // Flash node only if not already held active
+            if (node) {
+                const el = document.getElementById(`arch-${node}`);
+                if (el && !el.classList.contains(ARCH_LIT[node])) {
+                    const cls = ARCH_LIT[node] || 'lit-orchestrator';
+                    el.classList.add(cls);
+                    clearTimeout(_litTimers[node]);
+                    _litTimers[node] = setTimeout(() => el.classList.remove(cls), 1800);
+                }
             }
-            // Optionally highlight an edge
+            // Pulse edge
             if (edgeKey) {
                 const edgeId = ARCH_EDGES[edgeKey];
                 const edge = edgeId && document.getElementById(edgeId);
@@ -1202,6 +1477,100 @@
         function clearLog() {
             document.getElementById('log-body').innerHTML = '';
         }
+
+        // ── Arch debug panel tabs ────────────────────────────
+        let _archView = 'diagram';
+
+        function archSetView(view) {
+            _archView = view;
+            ['diagram', 'context', 'calls'].forEach(v => {
+                const pane = document.getElementById(`arch-pane-${v}`);
+                const tab  = document.querySelector(`.arch-tab[onclick="archSetView('${v}')"]`);
+                if (pane) pane.classList.toggle('active', v === view);
+                if (tab)  tab.classList.toggle('active', v === view);
+            });
+        }
+
+        // Called from Python (agent.py) after every messages[] mutation.
+        // messages: plain JS array (already converted from Python list via to_js).
+        window.archUpdateContext = (messages) => {
+            const pane = document.getElementById('arch-pane-context');
+            if (!pane) return;
+            const empty = document.getElementById('ctx-empty');
+            if (empty) empty.remove();
+
+            // Full re-render each time (messages list is small, typically <20 items)
+            pane.innerHTML = '';
+            const arr = Array.isArray(messages) ? messages : Array.from(messages);
+            arr.forEach((msg, i) => {
+                const role = msg.role || 'unknown';
+                let text = '';
+                if (typeof msg.content === 'string') {
+                    text = msg.content;
+                } else if (Array.isArray(msg.content)) {
+                    text = msg.content.map(c => c.text || JSON.stringify(c)).join('\n');
+                } else if (msg.tool_calls) {
+                    text = JSON.stringify(msg.tool_calls, null, 2);
+                } else {
+                    text = JSON.stringify(msg, null, 2);
+                }
+
+                const div = document.createElement('div');
+                div.className = 'ctx-msg';
+                const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                const preview = escaped.length > 60 ? escaped.slice(0,60).replace(/\n/g,' ') + '…' : escaped.replace(/\n/g,' ');
+                div.innerHTML =
+                    `<div class="ctx-msg-header">` +
+                    `<span class="ctx-msg-role role-${role}">${role}</span>` +
+                    `<span style="color:var(--muted);font-size:.63rem;">#${i+1} · ${escaped.length} chars</span>` +
+                    `<span style="color:#3a3f52;margin-left:auto;font-size:.63rem;">${preview}</span>` +
+                    `</div>` +
+                    `<div class="ctx-msg-body">${escaped}</div>`;
+                pane.appendChild(div);
+            });
+
+            // Auto-scroll to bottom
+            pane.scrollTop = pane.scrollHeight;
+        };
+
+        // Called from Python (tiers.py) when a request is dispatched.
+        window.archAddCall = (tier, direction, payload) => {
+            const pane = document.getElementById('arch-pane-calls');
+            if (!pane) return;
+            const empty = document.getElementById('calls-empty');
+            if (empty) empty.remove();
+
+            const ts = _logTs();
+            const isReq = direction === 'request';
+            const badgeCls = isReq ? 'req' : 'res';
+            const label = isReq ? `→ ${tier}` : `← ${tier}`;
+
+            let text = '';
+            try {
+                text = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
+            } catch { text = String(payload); }
+
+            const div = document.createElement('div');
+            div.className = 'call-entry';
+            const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            div.innerHTML =
+                `<div class="call-entry-header">` +
+                `<span class="call-badge ${badgeCls}">${direction.toUpperCase()}</span>` +
+                `<span style="color:var(--muted);">${label}</span>` +
+                `<span style="color:#3a3f52;margin-left:auto;">${ts}</span>` +
+                `</div>` +
+                `<div class="call-entry-body">${escaped}</div>`;
+            pane.appendChild(div);
+            pane.scrollTop = pane.scrollHeight;
+        };
+
+        // Clear both debug panes (called when a new demo starts).
+        window.archClearDebug = () => {
+            const ctx = document.getElementById('arch-pane-context');
+            const calls = document.getElementById('arch-pane-calls');
+            if (ctx) ctx.innerHTML = '<div class="arch-debug-empty" id="ctx-empty">No context yet — run a demo to see messages[]</div>';
+            if (calls) calls.innerHTML = '<div class="arch-debug-empty" id="calls-empty">No API calls yet — run a demo to capture requests &amp; responses</div>';
+        };
 
         // ── Metrics strip ────────────────────────────────────
         function updateMetrics() {

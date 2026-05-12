@@ -19,7 +19,8 @@ PYODIDE_TOOLS = [
         "name": "analyze_csv",
         "description": (
             "Analyze a CSV file using Pandas running in the browser (Pyodide). "
-            "Returns row count, total revenue, top product by revenue, and QoQ growth. "
+            "Returns column names, row count, total revenue, top product by revenue, and QoQ growth. "
+            "Call this tool whenever the user asks about the file structure, column names, or data analysis. "
             "No data leaves the browser."
         ),
         "inputSchema": {
@@ -67,7 +68,9 @@ async def _call_analyze_csv(arguments: dict) -> dict:
         except Exception:
             qoq_str = "N/A"
 
+        columns = ", ".join(df.columns.tolist())
         summary = (
+            f"Columns: {columns} | "
             f"Rows: {rows:,} | "
             f"Total revenue: ${total_rev:,.0f} | "
             f"Top product: {top_product} (${top_rev:,.0f}) | "

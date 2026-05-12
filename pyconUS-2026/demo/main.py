@@ -4,50 +4,32 @@ Demo 1: In-browser date conversion (default tier: in-browser)
 Demo 2: LLM calls analyze_csv Pyodide tool, then narrates results (default tier: remote)
 Demo 3: LLM calls MCP tools over HTTP — web_search + save_to_file (default tier: remote)
 
-Each demo reads its tier selector, then streams through the chosen tier.
+Each demo builds a messages list and calls run_agent_loop.
+All streaming, bubble management, diagram state, and logging live in agent.py.
 """
 
 import asyncio
 from pyscript import document
 
-from ui import (
-    add_message, clear_messages, update_status,
-    add_streaming_message, update_streaming_message, finish_streaming_message,
-    add_tool_call_pill, add_tool_result, get_selected_tier, agent_log, agent_highlight,
-)
+from ui import add_message, clear_messages, update_status, get_selected_tier, agent_log
 from router import route_request
 from tiers import get_tier
 from tools import list_tools, format_tools_for_llm, PYODIDE_TOOLS
 from agent import run_agent_loop
-from metrics import start_timer, record_ttft
+
+# Shared conversation history — seeded by each demo, extended by send_message.
+# run_agent_loop mutates this list in place (appending assistant + tool messages),
+# so follow-up questions automatically have full context.
+_history: list = []
+_current_tools: list = []  # tool schemas active for the current demo session
 
 
 # =============================================================================
-# SHARED STREAMING HELPER
-# =============================================================================
-
-async def _stream_into_bubble(tier, messages, tools=None, route=None):
-    """Stream tier.stream_chat() into a new message bubble. Returns full text."""
-    msg = add_streaming_message(route=route)
-    full_text = ""
-    t = start_timer()
-    first_token = True
-    async for delta in tier.stream_chat(messages, tools):
-        if delta.text:
-            if first_token:
-                record_ttft(t)
-                first_token = False
-            update_streaming_message(msg, delta.text)
-            full_text += delta.text
-    finish_streaming_message(msg)
-    return full_text
-
-
-# =============================================================================
-# DEMO 1 — In-browser date conversion
+# DEMO 1 — Pure LLM call, no tools
 # =============================================================================
 
 async def run_demo_1(event=None):
+    global _history, _current_tools
     clear_messages()
     tier_name = get_selected_tier()
     tier = get_tier(tier_name)
@@ -60,18 +42,14 @@ async def run_demo_1(event=None):
     from pyscript import window as _win
     _win.animateRoute(tier_name, routing.get("keyword", "date"))
 
-    agent_log("route",  f"keyword match: \"{routing.get('keyword', '')}\" → {routing['reason']}")
-    agent_log("tier",   f"inference tier: {tier_name} (no tools — pure LLM call)")
-    agent_log("llm_start", f"sending 1 message to {tier_name} LLM")
-    agent_highlight("user", "user-orchestrator")
-    agent_highlight("orchestrator")
-    agent_highlight("llm", "orchestrator-llm")
+    agent_log("route", f"keyword match: \"{routing.get('keyword', '')}\" → {routing['reason']}")
+    agent_log("tier",  f"inference tier: {tier_name} (no tools — pure LLM call)")
 
-    messages = [{"role": "user", "content": prompt}]
-    await _stream_into_bubble(tier, messages, route=tier_name)
+    _current_tools = []
+    _history = [{"role": "user", "content": prompt}]
+    await run_agent_loop(tier=tier, messages=_history, tools=_current_tools, route=tier_name)
 
     agent_log("agent_done", "response complete")
-    agent_highlight("orchestrator")
 
 
 # =============================================================================
@@ -79,6 +57,7 @@ async def run_demo_1(event=None):
 # =============================================================================
 
 async def run_demo_2(event=None):
+    global _history, _current_tools
     clear_messages()
     tier_name = get_selected_tier()
     tier = get_tier(tier_name)
@@ -94,83 +73,36 @@ async def run_demo_2(event=None):
     from pyscript import window as _win
     _win.animateRoute(tier_name, "CSV")
 
-    agent_log("route",       f"keyword match: \"{routing.get('keyword', '')}\" → {routing['reason']}")
-    agent_log("tier",        f"inference tier: {tier_name} | tool: analyze_csv (pyodide — in-browser Pandas)")
-    agent_log("info",        "tool schema sent to LLM — waiting for tool_call decision")
-    agent_highlight("user", "user-orchestrator")
-    agent_highlight("orchestrator")
+    agent_log("route", f"keyword match: \"{routing.get('keyword', '')}\" → {routing['reason']}")
+    agent_log("tier",  f"inference tier: {tier_name} | tool: analyze_csv (pyodide — in-browser Pandas)")
+    agent_log("info",  "tool schema sent to LLM — waiting for tool_call decision")
 
-    tools_for_llm = format_tools_for_llm(PYODIDE_TOOLS)
-    messages = [
+    _current_tools = format_tools_for_llm(PYODIDE_TOOLS)
+    _history = [
         {
             "role": "system",
             "content": (
                 "You are a data analyst assistant. You have access to an analyze_csv tool "
                 "that runs Pandas in the browser — no data leaves the device. "
-                "When asked to analyze a CSV, always call analyze_csv first, "
-                "then write your summary based on the tool result."
+                "The tool returns: column names, row count, total revenue, top product, and QoQ growth. "
+                "Call analyze_csv first before answering any question about a CSV file. "
+                "For follow-up questions, answer directly from the tool result already in the conversation — "
+                "do not claim the tool lacks information that is already present in the tool result."
             ),
         },
         {"role": "user", "content": prompt},
     ]
-
-    current_bubble = [None]
-
-    def on_turn_start():
-        current_bubble[0] = add_streaming_message(route=tier_name)
-        agent_log("llm_start", f"LLM turn started ({tier_name})")
-        agent_highlight("orchestrator", "orchestrator-llm")
-        agent_highlight("llm")
-
-    def on_turn_end():
-        if current_bubble[0]:
-            finish_streaming_message(current_bubble[0])
-            current_bubble[0] = None
-
-    def on_delta(text):
-        if current_bubble[0]:
-            update_streaming_message(current_bubble[0], text)
-
-    def on_tool_call(tc):
-        add_tool_call_pill(tc)
-        if tc.name == "analyze_csv":
-            agent_log("tool_pyodide", f"tool_call → {tc.name}({tc.args}) — dispatching to Pyodide")
-            agent_highlight("orchestrator", "orchestrator-pyodide")
-            agent_highlight("pyodide")
-        else:
-            agent_log("tool_call", f"tool_call → {tc.name}({tc.args})")
-
-    def on_tool_result(tc, result_text):
-        add_tool_result(tc, result_text)
-        preview = result_text[:80] + ("…" if len(result_text) > 80 else "")
-        if tc.name == "analyze_csv":
-            agent_log("tool_result", f"pyodide result: {preview}")
-            agent_log("llm_start",   "tool result appended to context — LLM generating narrative")
-            agent_highlight("pyodide")
-            agent_highlight("orchestrator")
-        else:
-            agent_log("tool_result", f"result from {tc.name}: {preview}")
-
-    await run_agent_loop(
-        tier=tier,
-        messages=messages,
-        tools=tools_for_llm,
-        on_delta=on_delta,
-        on_tool_call=on_tool_call,
-        on_tool_result=on_tool_result,
-        on_turn_start=on_turn_start,
-        on_turn_end=on_turn_end,
-    )
+    await run_agent_loop(tier=tier, messages=_history, tools=_current_tools, route=tier_name)
 
     agent_log("agent_done", "agent loop complete")
-    agent_highlight("orchestrator")
 
 
 # =============================================================================
-# DEMO 3 — Remote + MCP tool-calling agent loop
+# DEMO 3 — LLM calls MCP tools over HTTP
 # =============================================================================
 
 async def run_demo_3(event=None):
+    global _history, _current_tools
     clear_messages()
     tier_name = get_selected_tier()
     tier = get_tier(tier_name)
@@ -186,20 +118,17 @@ async def run_demo_3(event=None):
     from pyscript import window as _win
     _win.animateRoute(tier_name, routing.get("keyword", "agent"))
 
-    # Discover tools
     mcp_tools = await list_tools()
     tool_names = [t["name"] for t in mcp_tools] if mcp_tools else ["(none found)"]
     add_message(f"<em>MCP tools available: {', '.join(tool_names)}</em>", role="system")
 
-    agent_log("route",     f"keyword match: \"{routing.get('keyword', '')}\" → {routing['reason']}")
-    agent_log("tier",      f"inference tier: {tier_name} | transport: MCP over HTTP (localhost:8765)")
-    agent_log("info",      f"tools discovered: {', '.join(tool_names)}")
-    agent_log("info",      "tool schemas sent to LLM — waiting for tool_call decision")
-    agent_highlight("user", "user-orchestrator")
-    agent_highlight("orchestrator")
+    agent_log("route", f"keyword match: \"{routing.get('keyword', '')}\" → {routing['reason']}")
+    agent_log("tier",  f"inference tier: {tier_name} | transport: MCP over HTTP (localhost:8765)")
+    agent_log("info",  f"tools discovered: {', '.join(tool_names)}")
+    agent_log("info",  "tool schemas sent to LLM — waiting for tool_call decision")
 
-    tools_for_llm = format_tools_for_llm(mcp_tools)
-    messages = [
+    _current_tools = format_tools_for_llm(mcp_tools)
+    _history = [
         {
             "role": "system",
             "content": (
@@ -211,51 +140,9 @@ async def run_demo_3(event=None):
         },
         {"role": "user", "content": prompt},
     ]
-
-    current_bubble = [None]
-
-    def on_turn_start():
-        current_bubble[0] = add_streaming_message(route=tier_name)
-        agent_log("llm_start", f"LLM turn started ({tier_name})")
-        agent_highlight("orchestrator", "orchestrator-llm")
-        agent_highlight("llm")
-
-    def on_turn_end():
-        if current_bubble[0]:
-            finish_streaming_message(current_bubble[0])
-            current_bubble[0] = None
-
-    def on_delta(text):
-        if current_bubble[0]:
-            update_streaming_message(current_bubble[0], text)
-
-    def on_tool_call(tc):
-        add_tool_call_pill(tc)
-        agent_log("tool_call", f"tool_call → {tc.name}({tc.args}) — dispatching to MCP HTTP server")
-        agent_highlight("orchestrator", "orchestrator-mcp")
-        agent_highlight("mcp")
-
-    def on_tool_result(tc, result_text):
-        add_tool_result(tc, result_text)
-        preview = result_text[:80] + ("…" if len(result_text) > 80 else "")
-        agent_log("tool_result", f"mcp result from {tc.name}: {preview}")
-        agent_log("llm_start",   "tool result appended to context — continuing agent loop")
-        agent_highlight("mcp")
-        agent_highlight("orchestrator")
-
-    await run_agent_loop(
-        tier=tier,
-        messages=messages,
-        tools=tools_for_llm,
-        on_delta=on_delta,
-        on_tool_call=on_tool_call,
-        on_tool_result=on_tool_result,
-        on_turn_start=on_turn_start,
-        on_turn_end=on_turn_end,
-    )
+    await run_agent_loop(tier=tier, messages=_history, tools=_current_tools, route=tier_name)
 
     agent_log("agent_done", "agent loop complete")
-    agent_highlight("orchestrator")
 
 
 # =============================================================================
@@ -263,6 +150,7 @@ async def run_demo_3(event=None):
 # =============================================================================
 
 async def send_message(event=None):
+    global _history, _current_tools
     input_el = document.getElementById("user-input")
     prompt = input_el.value.strip()
     if not prompt:
@@ -277,9 +165,14 @@ async def send_message(event=None):
     from pyscript import window as _win
     _win.animateRoute(tier_name, routing.get("keyword", ""))
 
-    tier = get_tier(tier_name)
-    messages = [{"role": "user", "content": prompt}]
-    await _stream_into_bubble(tier, messages, route=tier_name)
+    _history.append({"role": "user", "content": prompt})
+
+    await run_agent_loop(
+        tier=get_tier(tier_name),
+        messages=_history,
+        tools=_current_tools,
+        route=tier_name,
+    )
 
 
 async def handle_keydown(event):
@@ -295,11 +188,16 @@ print("Router Demo — PyCon US 2026")
 update_status("", "In-browser: Not loaded")
 agent_log("info", "PyScript + Pyodide ready — Python running in the browser")
 
+# Expose step-mode resume to JS
+from pyscript import window as _win
+from pyodide.ffi import create_proxy
+from agent import resume_step
+_win.agentResumeStep = create_proxy(resume_step)
+
 async def _prewarm():
     """Background pre-warm of WebLLM so Demo 1 in-browser is fast on stage."""
     from pyscript import window
     from tiers import _init_browser_engine
-    # Only attempt if the browser reports WebGPU + Cache API are available
     if not getattr(window.navigator, "gpu", None):
         return
     if str(getattr(window, "caches", None)) in ("None", "undefined", ""):

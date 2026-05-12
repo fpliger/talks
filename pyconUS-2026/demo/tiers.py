@@ -99,6 +99,14 @@ class InBrowserTier:
             return
 
         agent_log("tier", f"in-browser: sending {len(messages)} message(s) to {BROWSER_MODEL_ID}")
+        _push_call("in-browser", "request", {
+            "model": BROWSER_MODEL_ID,
+            "messages": messages,
+            "max_tokens": 512,
+            "temperature": 0.1,
+            "stream": True,
+            "note": "WebLLM — runs entirely in the browser, no network call",
+        })
         try:
             # Pass options as a JS object — Python dict kwargs don't survive
             # the async boundary correctly with some WebLLM builds
@@ -111,6 +119,7 @@ class InBrowserTier:
 
             stream = await _browser_engine.chat.completions.create(options)
             agent_log("tier", "in-browser: stream opened — reading tokens")
+            _push_call("in-browser", "response", {"stream": "WebLLM token stream (in-browser, no HTTP)"})
 
             async for chunk in stream:
                 # Extract values immediately before yielding — proxies are
@@ -124,10 +133,20 @@ class InBrowserTier:
 
                 if content:
                     yield Delta(text=content)
-                if finish == "stop":
-                    agent_log("tier", "in-browser: stream finished (stop)")
+                # WebLLM may send finish_reason as "stop", "None", or "null"
+                if finish in ("stop", "length"):
+                    agent_log("tier", f"in-browser: stream finished ({finish})")
                     yield Delta(finish_reason="stop")
                     return
+                if finish not in ("", "None", "null", "none"):
+                    # unexpected finish reason — treat as stop
+                    agent_log("tier", f"in-browser: stream finished (finish_reason={finish!r})")
+                    yield Delta(finish_reason="stop")
+                    return
+
+            # Stream exhausted without an explicit finish_reason
+            agent_log("tier", "in-browser: stream ended (no explicit finish_reason — implying stop)")
+            yield Delta(finish_reason="stop")
         except Exception as e:
             agent_log("error", f"in-browser: exception during stream — {e}")
             yield Delta(text=f"\n[Error: {e}]", finish_reason="stop")
@@ -136,6 +155,13 @@ class InBrowserTier:
 # =============================================================================
 # LOCAL TIER (Ollama / LM Studio / llama.cpp — OpenAI-compatible)
 # =============================================================================
+
+def _push_call(tier_name: str, direction: str, payload):
+    try:
+        window.archAddCall(tier_name, direction, json.dumps(payload, indent=2))
+    except Exception:
+        pass
+
 
 class LocalTier:
     name = "local"
@@ -151,6 +177,7 @@ class LocalTier:
         if tools:
             payload["tools"] = tools
 
+        _push_call("local", "request", payload)
         try:
             response = await fetch(
                 url,
@@ -161,11 +188,13 @@ class LocalTier:
             agent_log("tier", f"local: HTTP {response.status} — reading SSE stream")
             if response.status != 200:
                 raise Exception(f"HTTP {response.status}")
+            _push_call("local", "response", {"status": response.status, "stream": "SSE (streamed tokens)"})
             async for delta in parse_openai_sse(response):
                 yield delta
             agent_log("tier", "local: stream complete")
         except Exception as e:
             agent_log("error", f"local: {e}")
+            _push_call("local", "response", {"error": str(e)})
             yield Delta(text=f"[Local server error: {e}]", finish_reason="stop")
 
 
@@ -192,6 +221,7 @@ class RemoteTier:
         if REMOTE_API_KEY:
             headers["Authorization"] = f"Bearer {REMOTE_API_KEY}"
 
+        _push_call("remote", "request", payload)
         try:
             response = await fetch(
                 url,
@@ -202,11 +232,13 @@ class RemoteTier:
             agent_log("tier", f"remote: HTTP {response.status} — reading SSE stream")
             if response.status != 200:
                 raise Exception(f"HTTP {response.status}")
+            _push_call("remote", "response", {"status": response.status, "stream": "SSE (streamed tokens)"})
             async for delta in parse_openai_sse(response):
                 yield delta
             agent_log("tier", "remote: stream complete")
         except Exception as e:
             agent_log("error", f"remote: {e}")
+            _push_call("remote", "response", {"error": str(e)})
             yield Delta(text=f"[Remote API error: {e}]", finish_reason="stop")
 
 

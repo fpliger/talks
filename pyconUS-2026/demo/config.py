@@ -16,14 +16,16 @@ DEMO_DEFAULTS = {1: "in-browser", 2: "remote", 3: "remote"}
 
 # =============================================================================
 # IN-BROWSER MODEL (WebLLM via WebGPU)
+# Qwen2.5-1.5B-Instruct: smallest model in the WebLLM registry with reliable
+# function-calling support — needed for Demo 2's analyze_csv tool call.
 # =============================================================================
-BROWSER_MODEL_ID = "Llama-3.2-1B-Instruct-q4f32_1-MLC"
+BROWSER_MODEL_ID = "Qwen2.5-1.5B-Instruct-q4f16_1-MLC"
 
 # =============================================================================
 # LOCAL SERVER (Ollama / LM Studio / llama.cpp — OpenAI-compatible)
 # =============================================================================
 LOCAL_API_URL = os.environ.get("LOCAL_API_URL", "http://localhost:11434")
-LOCAL_API_MODEL = os.environ.get("LOCAL_API_MODEL", "llama3.2")
+LOCAL_API_MODEL = os.environ.get("LOCAL_API_MODEL", "Qwen3-8B")
 
 # =============================================================================
 # REMOTE API (real frontier model, or mock SSE server on :8766)

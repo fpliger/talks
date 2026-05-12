@@ -116,6 +116,11 @@ def add_tool_result(tc, result_text):
 
 def clear_messages():
     document.getElementById("messages").innerHTML = ""
+    try:
+        from pyscript import window
+        window.archClearDebug()
+    except Exception:
+        pass
 
 
 # =============================================================================
@@ -131,8 +136,28 @@ def agent_log(type: str, text: str):
         pass
 
 
+def agent_activate(node: str, edge: str = ""):
+    """Hold a node lit until agent_deactivate() is called. Optionally pulse an edge."""
+    from pyscript import window
+    try:
+        window.agentActivate(node)
+        if edge:
+            window.agentHighlight(None, edge)
+    except Exception:
+        pass
+
+
+def agent_deactivate(node: str):
+    """Remove the persistent lit state from a node."""
+    from pyscript import window
+    try:
+        window.agentDeactivate(node)
+    except Exception:
+        pass
+
+
 def agent_highlight(node: str, edge: str = ""):
-    """Light up a node (and optionally an edge) in the arch diagram."""
+    """Pulse a node briefly and/or flash an edge. Use agent_activate for sustained state."""
     from pyscript import window
     try:
         window.agentHighlight(node, edge or None)
