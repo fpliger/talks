@@ -1,0 +1,417 @@
+/* ─────────────────────────────────────────────────────────────
+   Global styles for the PyCon US 2026 talk deck.
+   Palette mirrors the demo (demo/index.html) so the cut from
+   slides → live demo is visually seamless.
+   ───────────────────────────────────────────────────────────── */
+
+/* Hide the Goto dialog by default; shown when .goto-open is on <html> */
+#slidev-goto-dialog { display: none; }
+html.goto-open #slidev-goto-dialog { display: block !important; }
+
+:root {
+  --browser:  #1de9b6;
+  --local:    #69f0ae;
+  --remote:   #448aff;
+  --hybrid:   #e040fb;
+  --tool:     #ffab40;
+  --pyodide:  #a78bfa;
+
+  --bg:       #0d0f14;
+  --surface:  #161920;
+  --surface2: #1e2129;
+  --border:   #2a2d36;
+  --text:     #e2e4ea;
+  --muted:    #6b7280;
+  --code-bg:  #11131a;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+html, body, #app, .slidev-layout {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+.slidev-layout {
+  padding: 3rem 4rem;
+}
+
+.slidev-layout h1,
+.slidev-layout h2,
+.slidev-layout h3 {
+  color: #fff;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+
+.slidev-layout code {
+  font-family: var(--font-mono);
+  background: var(--code-bg);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  font-size: 0.92em;
+}
+
+.slidev-layout pre {
+  background: var(--code-bg) !important;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.85rem 1rem !important;
+  font-family: var(--font-mono);
+}
+
+.slidev-page-number,
+.slidev-presenter-cursor {
+  color: var(--muted);
+}
+
+/* ── Tier color helpers ───────────────────────────────────── */
+.tier-browser { color: var(--browser); }
+.tier-local   { color: var(--local); }
+.tier-remote  { color: var(--remote); }
+.tier-tool    { color: var(--tool); }
+.tier-pyodide { color: var(--pyodide); }
+
+.mono { font-family: var(--font-mono); }
+
+/* ── Big-text slides (thesis, section headers) ────────────── */
+.big-thesis {
+  font-size: 4rem;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #fff;
+  max-width: 24ch;
+}
+
+.big-thesis .accent {
+  background: linear-gradient(90deg, var(--browser), var(--local));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.section-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+/* ── Anatomy grid ─────────────────────────────────────────── */
+.anatomy {
+  display: grid;
+  grid-template-columns: 8rem repeat(4, 1fr);
+  grid-template-rows: auto auto auto;
+  gap: 0.75rem;
+  font-size: 0.95rem;
+}
+.anatomy .row-label {
+  display: flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.anatomy .col-head {
+  text-align: center;
+  font-weight: 600;
+  font-size: 1.1rem;
+  padding: 0.25rem 0;
+  border-bottom: 2px solid var(--border);
+}
+.anatomy .cell {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-height: 7.5rem;
+}
+.anatomy .cell .label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.anatomy .cell .desc {
+  font-size: 0.95rem;
+  color: var(--text);
+  line-height: 1.45;
+}
+.anatomy .cell.model    { border-color: color-mix(in srgb, var(--remote) 40%, var(--border)); }
+.anatomy .cell.model    .label { color: var(--remote); }
+.anatomy .cell.tools    { border-color: color-mix(in srgb, var(--tool) 40%, var(--border)); }
+.anatomy .cell.tools    .label { color: var(--tool); }
+.anatomy .cell.loop     { border-color: color-mix(in srgb, var(--local) 40%, var(--border)); }
+.anatomy .cell.loop     .label { color: var(--local); }
+.anatomy .cell.context  { border-color: color-mix(in srgb, var(--pyodide) 40%, var(--border)); }
+.anatomy .cell.context  .label { color: var(--pyodide); }
+
+.anatomy .invariant {
+  grid-column: 1 / -1;
+  margin-top: 0.5rem;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+}
+.anatomy .invariant strong { color: var(--text); }
+
+/* ── Three-tier slide ─────────────────────────────────────── */
+.tiers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+.tiers .tier {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  padding: 1.5rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-height: 22rem;
+  position: relative;
+}
+.tiers .tier .tier-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.tiers .tier .tier-head .dot {
+  width: 10px; height: 10px; border-radius: 50%;
+}
+.tiers .tier h3 {
+  font-size: 1.5rem;
+  margin: 0;
+}
+.tiers .tier .ttft {
+  font-family: var(--font-mono);
+  font-size: 2.4rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.tiers .tier .ttft small {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-top: 0.3rem;
+}
+.tiers .tier .meta {
+  margin-top: auto;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.tiers .tier .meta strong { color: var(--text); font-weight: 500; }
+
+.tiers .tier.browser { border-color: color-mix(in srgb, var(--browser) 50%, var(--border)); }
+.tiers .tier.browser .dot { background: var(--browser); box-shadow: 0 0 14px var(--browser); }
+.tiers .tier.browser .tier-head, .tiers .tier.browser .ttft { color: var(--browser); }
+
+.tiers .tier.local { border-color: color-mix(in srgb, var(--local) 50%, var(--border)); }
+.tiers .tier.local .dot { background: var(--local); box-shadow: 0 0 14px var(--local); }
+.tiers .tier.local .tier-head, .tiers .tier.local .ttft { color: var(--local); }
+
+.tiers .tier.remote { border-color: color-mix(in srgb, var(--remote) 50%, var(--border)); }
+.tiers .tier.remote .dot { background: var(--remote); box-shadow: 0 0 14px var(--remote); }
+.tiers .tier.remote .tier-head, .tiers .tier.remote .ttft { color: var(--remote); }
+
+/* ── Why-now numbers ──────────────────────────────────────── */
+.why-now {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.why-now .row {
+  display: grid;
+  grid-template-columns: 14rem 1fr;
+  gap: 2rem;
+  align-items: center;
+  padding: 1.25rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.why-now .row:last-child { border-bottom: none; }
+.why-now .num {
+  font-family: var(--font-mono);
+  font-size: 3rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--browser);
+}
+.why-now .row.r2 .num { color: var(--local); }
+.why-now .row.r3 .num { color: var(--tool); }
+.why-now .label {
+  font-size: 1.4rem;
+  line-height: 1.3;
+  color: var(--text);
+}
+.why-now .label small {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 0.3rem;
+  font-weight: 400;
+}
+.why-now .punch {
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  margin-top: 1.25rem;
+}
+.why-now .punch strong { color: var(--text); }
+
+/* ── Trade-offs table ─────────────────────────────────────── */
+.tradeoffs {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.tradeoffs th {
+  text-align: left;
+  padding: 0.6rem 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 2px solid var(--border);
+  font-weight: 600;
+}
+.tradeoffs th:not(:first-child) { text-align: center; }
+.tradeoffs td {
+  padding: 0.65rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.tradeoffs td:not(:first-child) { text-align: center; }
+.tradeoffs td:first-child {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.tradeoffs .pill {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.pill.green  { background: color-mix(in srgb, var(--local) 20%, transparent);   color: var(--local); }
+.pill.yellow { background: color-mix(in srgb, #ffc107 20%, transparent);        color: #ffc107; }
+.pill.red    { background: color-mix(in srgb, #ef5350 20%, transparent);        color: #ef5350; }
+.pill.blue   { background: color-mix(in srgb, var(--remote) 20%, transparent);  color: var(--remote); }
+.pill.teal   { background: color-mix(in srgb, var(--browser) 20%, transparent); color: var(--browser); }
+
+/* ── CTA / QR slide ───────────────────────────────────────── */
+.cta {
+  display: grid;
+  grid-template-columns: 1fr 18rem;
+  gap: 3rem;
+  align-items: center;
+}
+.cta h2 {
+  font-size: 3rem;
+  letter-spacing: -0.03em;
+  margin-bottom: 1rem;
+}
+.cta ol {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0;
+}
+.cta ol li {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: baseline;
+  gap: 0.8rem;
+}
+.cta ol li::before {
+  content: '0' counter(cta-step);
+  counter-increment: cta-step;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.cta ol { counter-reset: cta-step; }
+.cta .qr-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.25rem;
+  text-align: center;
+}
+.cta .qr-card .qr {
+  width: 100%;
+  aspect-ratio: 1;
+  background: #fff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: #888;
+}
+.cta .qr-card .url {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 0.6rem;
+  word-break: break-all;
+}
+
+/* ── Misc ─────────────────────────────────────────────────── */
+.timing {
+  position: absolute;
+  top: 1rem;
+  right: 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--muted);
+  opacity: 0.55;
+  letter-spacing: 0.08em;
+}
+
+.demo-frame {
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--code-bg);
+}
+
+.center-vh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
