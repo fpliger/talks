@@ -1020,16 +1020,16 @@
     <!-- Demo buttons -->
     <div class="demo-grid">
         <button class="demo-btn" id="demo1" py-click="run_demo_1">
-            Demo 1: Date Conversion
-            <small>Convert a date to ISO format</small>
-        </button>
-        <button class="demo-btn" id="demo2" py-click="run_demo_2">
-            Demo 2: CSV Analysis
+            Demo 1: CSV Analysis
             <small>Pandas in-browser + LLM narrative</small>
         </button>
-        <button class="demo-btn" id="demo3" py-click="run_demo_3">
-            Demo 3: Agent + MCP Tools
+        <button class="demo-btn" id="demo2" py-click="run_demo_2">
+            Demo 2: Agent + MCP Tools
             <small>web_search → save_to_file</small>
+        </button>
+        <button class="demo-btn" id="demo3" py-click="run_demo_3">
+            Demo 3: Folder Agent
+            <small>Load agent.yaml from disk</small>
         </button>
     </div>
 
@@ -1239,13 +1239,13 @@
             },
         };
 
-        // MCP is not a tier button but Demo 3 needs it — probe separately and
-        // disable demo3 with a tooltip if it's unreachable.
+        // MCP is not a tier button but Demo 2 needs it — probe separately and
+        // disable demo2 with a tooltip if it's unreachable.
         async function probeMcp() {
             try {
                 const r = await fetch('http://localhost:8765/health', { signal: AbortSignal.timeout(1500) });
                 const ok = r.ok;
-                const btn = document.getElementById('demo3');
+                const btn = document.getElementById('demo2');
                 if (btn) {
                     btn.disabled = !ok;
                     btn.title = ok ? '' : 'MCP server unreachable (port 8765)';
@@ -1253,13 +1253,21 @@
                     if (small) small.textContent = ok ? 'web_search → save_to_file' : '⚠ MCP server offline';
                 }
             } catch {
-                const btn = document.getElementById('demo3');
+                const btn = document.getElementById('demo2');
                 if (btn) {
                     btn.disabled = true;
                     btn.title = 'MCP server unreachable (port 8765)';
                     const small = btn.querySelector('small');
                     if (small) small.textContent = '⚠ MCP server offline';
                 }
+            }
+
+            // Demo 3 needs File System Access API — check and warn if unavailable
+            const demo3btn = document.getElementById('demo3');
+            if (demo3btn && !window.showDirectoryPicker) {
+                demo3btn.title = 'Requires File System Access API (Chrome/Edge)';
+                const small = demo3btn.querySelector('small');
+                if (small) small.textContent = '⚠ requires Chrome/Edge';
             }
         }
 
@@ -1665,6 +1673,54 @@
             btn.classList.remove('routed');
             void btn.offsetWidth;
             btn.classList.add('routed');
+        };
+
+        // ── Agent folder reader (used by Demo 3) ─────────────
+        // Returns a plain object with:
+        //   yaml         — text content of agent.yaml (empty string if missing)
+        //   documentsJson — JSON-stringified {filename: text} for files in documents/
+        //   mcpJson      — JSON-stringified content of tools/mcp.json (or "")
+        //   error        — human-readable error message (empty string on success)
+        window.readAgentFolder = async (dirHandle) => {
+            const result = { yaml: '', documentsJson: '{}', mcpJson: '', error: '' };
+            try {
+                // Read agent.yaml
+                try {
+                    const yamlHandle = await dirHandle.getFileHandle('agent.yaml');
+                    const yamlFile = await yamlHandle.getFile();
+                    result.yaml = await yamlFile.text();
+                } catch {
+                    result.error = 'agent.yaml not found in selected folder';
+                    return result;
+                }
+
+                // Read documents/ directory (flat, text files only)
+                const docs = {};
+                try {
+                    const docsHandle = await dirHandle.getDirectoryHandle('documents');
+                    for await (const [name, handle] of docsHandle.entries()) {
+                        if (handle.kind === 'file') {
+                            try {
+                                const f = await handle.getFile();
+                                docs[name] = await f.text();
+                            } catch { /* skip unreadable files */ }
+                        }
+                    }
+                } catch { /* documents/ is optional */ }
+                result.documentsJson = JSON.stringify(docs);
+
+                // Read tools/mcp.json
+                try {
+                    const toolsHandle = await dirHandle.getDirectoryHandle('tools');
+                    const mcpHandle   = await toolsHandle.getFileHandle('mcp.json');
+                    const mcpFile     = await mcpHandle.getFile();
+                    result.mcpJson    = await mcpFile.text();
+                } catch { /* tools/mcp.json is optional */ }
+
+            } catch (e) {
+                result.error = String(e);
+            }
+            return result;
         };
 
         // ── Progress bar visibility (driven by PyScript status updates) ──

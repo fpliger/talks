@@ -156,7 +156,7 @@ title: Anatomy — four parts
 </div>
 <div class="cell tools">
 <div class="label">acts</div>
-<div class="desc">Added functionality the model is allowed to call. APIs, scripts, services.</div>
+<div class="desc">Added functionality the model is allowed to call. APIs (MCPs), scripts, services.</div>
 </div>
 <div class="cell context">
 <div class="label">remembers</div>
@@ -187,6 +187,77 @@ top to bottom.
 Watch the time. This is the slide that wants to eat 30 extra seconds
 because you love it. Don't.
 -->
+
+---
+title: Anatomy (Continued) — four parts
+---
+
+<div class="section-eyebrow">Anatomy of an agent (continued)</div>
+<h2 style="font-size: 2.4rem; margin-bottom: 1.5rem;">Four parts.</h2>
+
+<div class="anatomy">
+<div></div>
+<div class="col-head">Model</div>
+<div class="col-head">Tools</div>
+<div class="col-head">Context</div>
+<div class="col-head">Loop</div>
+<div class="row-label">In general</div>
+<div class="cell model">
+<div class="label">decides</div>
+<div class="desc">The "brain" thing that picks <em>what to do next</em>. An LLM, mostly.</div>
+</div>
+<div class="cell tools">
+<div class="label">acts</div>
+<div class="desc">Added functionality the model is allowed to call. APIs, scripts, services.</div>
+</div>
+<div class="cell context">
+<div class="label">remembers</div>
+<div class="desc">What (custom information) the model sees on each turn. Instructions, history, results.</div>
+</div>
+<div class="cell loop">
+<div class="label">drives</div>
+<div class="desc">Ask &middot; act &middot; observe &middot; repeat. The runtime.</div>
+</div>
+<div class="row-label">In the browser</div>
+<div class="cell model">
+<div class="label">decides</div>
+<div class="desc">In-browser SLM (WebGPU), local server, or remote API.</div>
+</div>
+<div class="cell tools">
+<div class="label">acts</div>
+<div class="desc">MCP servers (HTTP), Python (JS, WASM, ...) tools (code), plus the DOM.</div>
+</div>
+<div class="cell context">
+<div class="label">remembers</div>
+<div class="desc"><code>messages[]</code>, plus DOM, sandboxed files, browser memory.</div>
+</div>
+<div class="cell loop">
+<div class="label">drives</div>
+<div class="desc">PyScript  (WASM|JS|...)  &mdash; Python running in the user's tab.</div>
+</div>
+<div class="invariant"><strong>Same architecture.</strong> Different implementation details.</div>
+</div>
+
+<div class="timing">01:45 · t+03:45</div>
+
+<!--
+SLIDE 7 — ANATOMY.  02:00–03:45.  ~1m45s.
+
+The teaching beat of the talk. Spend time here. Walk it left to right,
+top to bottom.
+
+  "Every agent is four things. A model that decides. Tools that act.
+   A loop that drives. And context — what the model sees.
+   That's it. Now look at row two — same four things. Different details.
+   The model is wherever it runs fastest. The tools are HTTP and the DOM.
+   The loop is Python, in the user's tab. The context is messages[].
+   The architecture doesn't change in the browser. Only where the parts
+   live."
+
+Watch the time. This is the slide that wants to eat 30 extra seconds
+because you love it. Don't.
+-->
+
 
 ---
 title: Anatomy — LLM
@@ -238,107 +309,6 @@ Then advance to the loop overview.
 -->
 
 ---
-title: Anatomy — one loop
----
-
-<div style="display: flex; flex-direction: column; height: 100%;">
-<div class="section-eyebrow">Anatomy of an agent</div>
-<h2 style="font-size: 2.4rem; margin-bottom: 0.5rem;">One loop.</h2>
-<div style="flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;">
-<LoopDiagram />
-</div>
-</div>
-
-<div class="timing">01:30 · t+05:15</div>
-
-<!--
-SLIDE 6 — THE LOOP.  03:45–05:15.  ~1m30s.
-
-Walk the four boxes once, slowly:
-
-  ① "Ask the model — what should I do?"
-  ② "Run the tool — call a function, hit an HTTP endpoint, run pandas."
-  ③ "Feed the result back — append to messages[], hand it back to the model."
-  ④ "Done? If yes, return. If not, loop."
-
-Land on: "That's it. That's the entire architecture of every agent
-you've ever used. Claude Code. Cursor. The thing your colleague is
-building on a Hugging Face Space. Same four boxes."
-
-Then bridge to demo: "Let me show it running."
--->
-
----
-title: Anatomy (Continued) — four parts
----
-
-<div class="section-eyebrow">Anatomy of an agent (continueed)</div>
-<h2 style="font-size: 2.4rem; margin-bottom: 1.5rem;">Four parts.</h2>
-
-<div class="anatomy">
-<div></div>
-<div class="col-head">Model</div>
-<div class="col-head">Tools</div>
-<div class="col-head">Context</div>
-<div class="col-head">Loop</div>
-<div class="row-label">In general</div>
-<div class="cell model">
-<div class="label">decides</div>
-<div class="desc">The "brain" thing that picks <em>what to do next</em>. An LLM, mostly.</div>
-</div>
-<div class="cell tools">
-<div class="label">acts</div>
-<div class="desc">Added functionality the model is allowed to call. APIs, scripts, services.</div>
-</div>
-<div class="cell context">
-<div class="label">remembers</div>
-<div class="desc">What (custom information) the model sees on each turn. Instructions, history, results.</div>
-</div>
-<div class="cell loop">
-<div class="label">drives</div>
-<div class="desc">Ask &middot; act &middot; observe &middot; repeat. The runtime.</div>
-</div>
-<div class="row-label">In the browser</div>
-<div class="cell model">
-<div class="label">decides</div>
-<div class="desc">In-browser SLM (WebGPU), local server, or remote API.</div>
-</div>
-<div class="cell tools">
-<div class="label">acts</div>
-<div class="desc">MCP servers (HTTP), Python tools (code), plus the DOM.</div>
-</div>
-<div class="cell context">
-<div class="label">remembers</div>
-<div class="desc"><code>messages[]</code>, plus DOM, sandboxed files, browser memory.</div>
-</div>
-<div class="cell loop">
-<div class="label">drives</div>
-<div class="desc">PyScript  (WASM|JS|...)  &mdash; Python running in the user's tab.</div>
-</div>
-<div class="invariant"><strong>Same architecture.</strong> Different implementation details.</div>
-</div>
-
-<div class="timing">01:45 · t+03:45</div>
-
-<!--
-SLIDE 7 — ANATOMY.  02:00–03:45.  ~1m45s.
-
-The teaching beat of the talk. Spend time here. Walk it left to right,
-top to bottom.
-
-  "Every agent is four things. A model that decides. Tools that act.
-   A loop that drives. And context — what the model sees.
-   That's it. Now look at row two — same four things. Different details.
-   The model is wherever it runs fastest. The tools are HTTP and the DOM.
-   The loop is Python, in the user's tab. The context is messages[].
-   The architecture doesn't change in the browser. Only where the parts
-   live."
-
-Watch the time. This is the slide that wants to eat 30 extra seconds
-because you love it. Don't.
--->
-
----
 title: M2 — The loop, made visible
 layout: center
 class: text-center
@@ -363,7 +333,7 @@ Step mode toggle is ON. Architecture panel visible on the right.
 -->
 
 ---
-title: Demo 3 — agent + tools
+title: Demo 2 — agent + tools
 layout: full
 ---
 
@@ -371,15 +341,15 @@ layout: full
 <div style="display: flex; flex-direction: column; justify-content: center; padding: 1.5rem 1rem 1.5rem 2.5rem;">
 <div class="section-eyebrow">What to watch</div>
 <h2 style="font-size: 1.5rem; margin-bottom: 0.75rem; line-height: 1.2;">
-Demo 3 — agent + tools<br/>
+Demo 2 — agent + tools<br/>
 <span style="color: var(--muted); font-weight: 400; font-size: 0.78rem; font-family: 'JetBrains Mono', monospace;">step mode &middot; remote tier</span>
 </h2>
 <ol style="font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; list-style: none; padding: 0; line-height: 1.35;">
-<li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem;"><span style="color: var(--muted); flex-shrink: 0;">①</span><span><span style="color: var(--browser);">User</span> prompt → orchestrator</span></li>
-<li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem;"><span style="color: var(--muted); flex-shrink: 0;">②</span><span>Orchestrator asks <span style="color: var(--remote);">LLM</span> with tools</span></li>
+<li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem;"><span style="color: var(--muted); flex-shrink: 0;">①</span><span><span style="color: var(--browser);">User</span> prompt → agent</span></li>
+<li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem;"><span style="color: var(--muted); flex-shrink: 0;">②</span><span>agent asks <span style="color: var(--remote);">LLM</span> with tools</span></li>
 <li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem;"><span style="color: var(--muted); flex-shrink: 0;">③</span><span>LLM returns <span style="color: var(--tool);">tool call</span> — web_search, analyze_csv, ...</span></li>
-<li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem;"><span style="color: var(--muted); flex-shrink: 0;">④</span><span>Orchestrator runs <span style="color: var(--tool);">MCP tool</span>, appends result</span></li>
-<li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem;"><span style="color: var(--muted); flex-shrink: 0;">⑤</span><span>LLM calls next <span style="color: var(--tool);">tool</span> — analyze_csv, save_to_file, ...</span></li>
+<li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem;"><span style="color: var(--muted); flex-shrink: 0;">④</span><span>agent runs <span style="color: var(--tool);">MCP tool</span>, appends result</span></li>
+<li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem;"><span style="color: var(--muted); flex-shrink: 0;">⑤</span><span>LLM calls next <span style="color: var(--tool);">tool</span> — save_to_file</span></li>
 <li style="padding: 0.3rem 0; display: flex; gap: 0.5rem;"><span style="color: var(--muted); flex-shrink: 0;">⑥</span><span>File on <em>your real disk</em>. No backend.</span></li>
 </ol>
 <p style="color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; margin-top: 0.85rem; line-height: 1.5;">
@@ -388,31 +358,21 @@ Demo 3 — agent + tools<br/>
 </p>
 </div>
 <div style="display: flex; align-items: center; justify-content: center; padding: 2rem;">
-<ArchDiagram lit-node="orchestrator" />
+<ArchDiagram lit-node="agent" />
 </div>
 </div>
 
 <div class="timing">06:00 · t+11:30</div>
 
 <!--
-SLIDE 9 — THE LIVE DEMO.  05:30–11:30.  ~6 min.
-
-This is the centerpiece. The slide is a stage prop — the real show is
-the browser tab. Cut to the demo when ready.
+SLIDE 9 — DEMO 2 AGENT.  05:30–11:30.  ~6 min.
 
 DEMO SCRIPT (step mode, remote tier):
-
   1. "Find me 3 climate stories from this week and save them to a file."
-  2. Click "Demo 3" with step mode ON.
-  3. Pause #1: orchestrator activated. Point: "Python in the tab."
-  4. Pause #2: → LLM call. Point at calls panel: "this is the request."
-  5. Token stream begins. Point: "messages[] is growing."
-  6. Pause #3: tool call returned. "The model said: 'call web_search'.
-     I am not running anything yet — just orchestrating."
-  7. Tool runs (MCP). Point at tool pill in chat. Point at calls panel.
-  8. Pause #4: results appended. "Now another LLM turn — same loop, again."
-  9. Second tool call: save_to_file. The OS file picker opens.
-  10. Pick a folder. File written. Open Finder. Show the .md file.
+  2. Click "Demo 2" with step mode ON.
+  3. Pause at each checkpoint — narrate what's happening.
+  4. When save_to_file fires, mount a local folder via the picker.
+  5. Open Finder — show the written file.
 
 LAND ON: "What you saw is the loop. ① ask ② act ③ observe ④ repeat.
 And every byte of that loop ran in this browser tab."
@@ -454,13 +414,13 @@ title: Three tiers
 <div class="tier-head"><span class="dot"></span>In-browser</div>
 <h3>WebGPU + WebLLM</h3>
 <!-- <div class="ttft">210<small>ms TTFT</small></div> -->
-<div class="meta"><strong>QwenQwen2.5 1.5B</strong>, ~850 MB, downloads once<br/>Runs on the user's GPU. Offline (cached) after first load.<br/><em>No data leaves the device.</em></div>
+<div class="meta"><strong>Qwen2.5 1.5B</strong>, ~850 MB, downloads once<br/>Runs on the user's GPU. Offline (cached) after first load.<br/><em>No data leaves the device.</em></div>
 </div>
 <div class="tier local">
 <div class="tier-head"><span class="dot"></span>Local</div>
 <h3>Ollama / Anaconda Desktop / Agent Studio</h3>
 <!-- <div class="ttft">85<small>ms TTFT</small></div> -->
-<div class="meta"><strong>Llama 3.2 8B</strong> via localhost<br/>Same machine, capable model, real tool calling.<br/><em>No data leaves the device.</em></div>
+<div class="meta"><strong>Qwen3 8B</strong> via localhost<br/>Same machine, capable model, real tool calling.<br/><em>No data leaves the device.</em></div>
 </div>
 <div class="tier remote">
 <div class="tier-head"><span class="dot"></span>Remote</div>
@@ -470,7 +430,7 @@ title: Three tiers
 </div>
 </div>
 
-<p style="text-align: center; margin-top: 2rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 0.9rem;">Same Python orchestrator. Same <code>stream_chat(messages, tools)</code>. Three implementations behind it.</p>
+<p style="text-align: center; margin-top: 2rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 0.9rem;">Same Python agent. Same <code>stream_chat(messages, tools)</code>. Three implementations behind it.</p>
 
 <div class="timing">02:00 · t+13:45</div>
 
@@ -489,73 +449,107 @@ Bridge to next slide: "Same demo, three tiers. Watch."
 -->
 
 ---
-title: Demo 1 — three tiers
+title: Demo 1 — CSV analysis
 layout: full
 ---
 
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; height: 100%; padding: 2rem 3rem;">
-<div style="display: flex; flex-direction: column; justify-content: center; gap: 1.25rem;">
+<div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 1.5rem; height: 100%; padding: 0;">
+<div style="display: flex; flex-direction: column; justify-content: center; padding: 1.5rem 1rem 1.5rem 2.5rem;">
 <div class="section-eyebrow">What to watch</div>
-<h2 style="font-size: 1.8rem; margin: 0; line-height: 1.15;">
-Show me the code<br/>
-<span style="color: var(--muted); font-weight: 400; font-size: 0.95rem; font-family: 'JetBrains Mono', monospace;">three tiers, in order</span>
+<h2 style="font-size: 1.5rem; margin-bottom: 0.75rem; line-height: 1.2;">
+Demo 1 — CSV analysis<br/>
+<span style="color: var(--muted); font-weight: 400; font-size: 0.78rem; font-family: 'JetBrains Mono', monospace;">Pyodide Pandas · any tier</span>
 </h2>
-<div style="display: flex; flex-direction: column; gap: 0.8rem; margin-top: 1rem;">
-<div style="display: grid; grid-template-columns: auto 1fr auto; gap: 1rem; align-items: center; padding: 0.75rem 1rem; background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--browser); border-radius: 8px;"><span style="font-family: 'JetBrains Mono', monospace; color: var(--browser); font-weight: 600; font-size: 0.85rem;">IN-BROWSER</span><span style="color: var(--text); font-size: 0.92rem;">Tab does the inference.</span><span class="mono" style="color: var(--browser); font-weight: 700;">slow</span></div>
-<div style="display: grid; grid-template-columns: auto 1fr auto; gap: 1rem; align-items: center; padding: 0.75rem 1rem; background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--local); border-radius: 8px;"><span style="font-family: 'JetBrains Mono', monospace; color: var(--local); font-weight: 600; font-size: 0.85rem;">LOCAL</span><span style="color: var(--text); font-size: 0.92rem;">Ollama, a 30s away.</span><span class="mono" style="color: var(--local); font-weight: 700;">slow*</span></div>
-<div style="display: grid; grid-template-columns: auto 1fr auto; gap: 1rem; align-items: center; padding: 0.75rem 1rem; background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--remote); border-radius: 8px;"><span style="font-family: 'JetBrains Mono', monospace; color: var(--remote); font-weight: 600; font-size: 0.85rem;">REMOTE</span><span style="color: var(--text); font-size: 0.92rem;">Frontier API.</span><span class="mono" style="color: var(--remote); font-weight: 700;">~fast</span></div>
-</div>
-<p style="color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; margin-top: 0.5rem; line-height: 1.55;">
-&rarr; Same prompt. Same Python.<br/>
-&rarr; The dropdown is the only thing that changes.
+<ol style="font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; list-style: none; padding: 0; line-height: 1.35;">
+<li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem;"><span style="color: var(--muted); flex-shrink: 0;">①</span><span><span style="color: var(--browser);">Pandas</span> runs <em>in the browser</em> — no data leaves the tab</span></li>
+<li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem;"><span style="color: var(--muted); flex-shrink: 0;">②</span><span>LLM receives the numeric summary as a <span style="color: var(--tool);">tool result</span></span></li>
+<li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem;"><span style="color: var(--muted); flex-shrink: 0;">③</span><span>LLM streams an executive summary</span></li>
+<li style="padding: 0.3rem 0; display: flex; gap: 0.5rem;"><span style="color: var(--muted); flex-shrink: 0;">④</span><span>Switch tiers — same result, different latency</span></li>
+</ol>
+<p style="color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; margin-top: 0.85rem; line-height: 1.5;">
+→ Watch Pyodide light up in the arch panel.<br/>
+→ Watch the context tab grow step by step.
 </p>
 </div>
-<div style="display: flex; align-items: center; justify-content: center;">
-
-```python
-# tiers.py — same interface, three implementations
-class InBrowserTier:
-    async def stream_chat(self, messages, tools):
-        engine = await webllm.CreateMLCEngine(...)
-        async for d in engine.chat.completions.create(...):
-            yield Delta(text=d.delta.content)
-
-class LocalTier:
-    async def stream_chat(self, messages, tools):
-        r = await fetch("http://localhost:11434/v1/chat/completions", ...)
-        async for evt in sse(r):
-            yield Delta(text=evt["choices"][0]["delta"]["content"])
-
-class RemoteTier:
-    async def stream_chat(self, messages, tools):
-        r = await fetch(REMOTE_API_URL, headers=AUTH, ...)
-        async for evt in sse(r):
-            yield Delta(text=evt["choices"][0]["delta"]["content"])
-```
-
+<div style="display: flex; align-items: center; justify-content: center; padding: 2rem;">
+<ArchDiagram lit-node="pyodide" />
 </div>
 </div>
 
-<div class="timing">03:45 · t+17:30</div>
+<div class="timing">03:00 · t+14:45</div>
 
 <!--
-SLIDE 12 — DEMO 1 ×3.   13:45–17:30.   ~3m45s.
-
-This is your second live moment. Cut to the demo.
+SLIDE 12 — DEMO 1 CSV.   13:45–14:45.   ~3 min.
 
 DEMO SCRIPT:
-  - In-browser tier active. Click Demo 1. Watch ~210ms TTFT.
-  - Switch tier dropdown to Local. Click Demo 1. Watch ~85ms.
-  - Switch tier dropdown to Remote. Click Demo 1. Watch ~11ms.
-  - Open trade-offs drawer briefly. The numbers are right there.
+  1. Remote tier active. Click Demo 1.
+  2. Watch Pyodide node light up — "that's Pandas running in the tab."
+  3. Watch tool result arrive in context panel — "no backend call."
+  4. LLM streams narrative. Point at calls panel: "one LLM call."
+  5. Ask a follow-up question in the input box.
 
-LAND ON: "Same Python. Three tiers. Same loop. The dropdown is the
-only thing I changed. That's the headline of this whole talk: the
-model is one box in the architecture; you can swap it without
-rewriting the agent."
+LAND ON: "Pandas ran here. Zero round trips to a data server.
+The model only saw the summary — private by construction."
+-->
 
-If you have time, drop the punchline early: "And here's the trick —
-the orchestrator never moves. It always runs in the tab."
+---
+title: Demo 3 — folder agent
+layout: full
+---
+
+<div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 1.5rem; height: 100%; padding: 0;">
+<div style="display: flex; flex-direction: column; justify-content: center; padding: 1.5rem 1rem 1.5rem 2.5rem;">
+<div class="section-eyebrow">What to watch</div>
+<h2 style="font-size: 1.5rem; margin-bottom: 0.75rem; line-height: 1.2;">
+Demo 3 — folder agent<br/>
+<span style="color: var(--muted); font-weight: 400; font-size: 0.78rem; font-family: 'JetBrains Mono', monospace;">load agent.yaml from disk · remote tier</span>
+</h2>
+<ol style="font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; list-style: none; padding: 0; line-height: 1.35;">
+<li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem;"><span style="color: var(--muted); flex-shrink: 0;">①</span><span>Click Demo 3 → browser opens a <span style="color: var(--browser);">folder picker</span></span></li>
+<li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem;"><span style="color: var(--muted); flex-shrink: 0;">②</span><span>Select <code>fred-example-agent/</code> from disk</span></li>
+<li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem;"><span style="color: var(--muted); flex-shrink: 0;">③</span><span>Python reads <code>agent.yaml</code> + <code>documents/</code> in the browser</span></li>
+<li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem;"><span style="color: var(--muted); flex-shrink: 0;">④</span><span>System prompt &amp; docs injected into <code>messages[]</code></span></li>
+<li style="padding: 0.3rem 0; display: flex; gap: 0.5rem;"><span style="color: var(--muted); flex-shrink: 0;">⑤</span><span>Agent introduces itself — then <em>chat with Fred</em></span></li>
+</ol>
+<p style="color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; margin-top: 0.85rem; line-height: 1.5;">
+→ No server. No upload. No account.<br/>
+→ The folder never leaves your machine.
+</p>
+</div>
+<div style="display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: 2rem; gap: 0.8rem; font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;">
+<div style="color: var(--muted); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;">fred-example-agent/</div>
+<div style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.25rem; width: 100%;">
+<div style="color: var(--tool);">agent.yaml</div>
+<div style="color: var(--muted); margin-top: 0.4rem; font-size: 0.7rem;">name · description · system_prompt</div>
+<div style="color: var(--muted); margin-top: 0.15rem; font-size: 0.7rem;">ai: provider · model · temperature</div>
+</div>
+<div style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.25rem; width: 100%;">
+<div style="color: var(--browser);">documents/</div>
+<div style="color: var(--muted); margin-top: 0.4rem; font-size: 0.7rem;">reference docs injected into context</div>
+</div>
+<div style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.25rem; width: 100%;">
+<div style="color: var(--muted);">tools/mcp.json</div>
+<div style="color: var(--muted); margin-top: 0.4rem; font-size: 0.7rem;">MCP server config (future)</div>
+</div>
+</div>
+</div>
+
+<div class="timing">03:00 · t+17:45</div>
+
+<!--
+SLIDE — DEMO 3 FOLDER AGENT.
+
+DEMO SCRIPT (remote tier):
+  1. Click Demo 3 — folder picker opens.
+  2. Navigate to demo/fred-example-agent/ and confirm.
+  3. Watch agent card appear: name, description, model, docs.
+  4. Agent auto-greets: "Yabba Dabba Doo!"
+  5. Type a question: "What do you do for work, Fred?"
+  6. Chat for 1-2 turns.
+
+LAND ON: "That folder is a portable agent definition. No server.
+The system prompt, documents, and config live on your disk.
+Python in the browser picked it up and ran it."
 -->
 
 ---

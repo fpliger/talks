@@ -1,8 +1,8 @@
 """Router Demo — main entry point.
 
-Demo 1: In-browser date conversion (default tier: in-browser)
-Demo 2: LLM calls analyze_csv Pyodide tool, then narrates results (default tier: remote)
-Demo 3: LLM calls MCP tools over HTTP — web_search + save_to_file (default tier: remote)
+Demo 1: LLM calls analyze_csv Pyodide tool, then narrates results (default tier: remote)
+Demo 2: LLM calls MCP tools over HTTP — web_search + save_to_file (default tier: remote)
+Demo 3: Load a local agent folder → instantiate and chat with that agent (default tier: remote)
 
 Each demo builds a messages list and calls run_agent_loop.
 All streaming, bubble management, diagram state, and logging live in agent.py.
@@ -16,6 +16,7 @@ from router import route_request
 from tiers import get_tier
 from tools import list_tools, format_tools_for_llm, PYODIDE_TOOLS
 from agent import run_agent_loop
+from agent_loader import load_agent_from_folder
 
 # Shared conversation history — seeded by each demo, extended by send_message.
 # run_agent_loop mutates this list in place (appending assistant + tool messages),
@@ -25,38 +26,10 @@ _current_tools: list = []  # tool schemas active for the current demo session
 
 
 # =============================================================================
-# DEMO 1 — Pure LLM call, no tools
+# DEMO 1 — LLM calls analyze_csv (Pyodide tool) then narrates results
 # =============================================================================
 
 async def run_demo_1(event=None):
-    global _history, _current_tools
-    clear_messages()
-    tier_name = get_selected_tier()
-    tier = get_tier(tier_name)
-
-    prompt = "Convert this date to ISO format: May 5, 2026. Reply with only the ISO date string, nothing else."
-    add_message(prompt, role="user")
-
-    routing = route_request(prompt)
-    add_message(f"<em>Routing → {tier_name.upper()} · {routing['reason']}</em>", role="system")
-    from pyscript import window as _win
-    _win.animateRoute(tier_name, routing.get("keyword", "date"))
-
-    agent_log("route", f"keyword match: \"{routing.get('keyword', '')}\" → {routing['reason']}")
-    agent_log("tier",  f"inference tier: {tier_name} (no tools — pure LLM call)")
-
-    _current_tools = []
-    _history = [{"role": "user", "content": prompt}]
-    await run_agent_loop(tier=tier, messages=_history, tools=_current_tools, route=tier_name)
-
-    agent_log("agent_done", "response complete")
-
-
-# =============================================================================
-# DEMO 2 — LLM calls analyze_csv (Pyodide tool) then narrates results
-# =============================================================================
-
-async def run_demo_2(event=None):
     global _history, _current_tools
     clear_messages()
     tier_name = get_selected_tier()
@@ -98,10 +71,10 @@ async def run_demo_2(event=None):
 
 
 # =============================================================================
-# DEMO 3 — LLM calls MCP tools over HTTP
+# DEMO 2 — LLM calls MCP tools over HTTP
 # =============================================================================
 
-async def run_demo_3(event=None):
+async def run_demo_2(event=None):
     global _history, _current_tools
     clear_messages()
     tier_name = get_selected_tier()
@@ -143,6 +116,82 @@ async def run_demo_3(event=None):
     await run_agent_loop(tier=tier, messages=_history, tools=_current_tools, route=tier_name)
 
     agent_log("agent_done", "agent loop complete")
+
+
+# =============================================================================
+# DEMO 3 — Load agent from local folder
+# =============================================================================
+
+async def run_demo_3(event=None):
+    """Prompt for a local agent folder, parse agent.yaml, chat with that agent."""
+    global _history, _current_tools
+    clear_messages()
+
+    add_message(
+        "📂 <strong>Folder Agent Demo</strong> — select a local agent folder to instantiate it.",
+        role="system",
+    )
+    agent_log("info", "waiting for user to select agent folder…")
+
+    config = await load_agent_from_folder()
+    if config is None:
+        add_message("<em>No folder selected — demo cancelled.</em>", role="system")
+        return
+
+    tier_name = get_selected_tier()
+    tier = get_tier(tier_name)
+
+    name        = config.get("name", "Agent")
+    description = config.get("description", "")
+    system_prompt_raw = config.get("system_prompt", "You are a helpful assistant.")
+    documents   = config.get("documents", {})   # {filename: text}
+    ai_cfg      = config.get("ai", {})
+
+    # Build system message: system_prompt + injected documents
+    system_content = system_prompt_raw.strip()
+    if documents:
+        docs_block = "\n\n".join(
+            f"## Document: {fname}\n\n{text}" for fname, text in documents.items()
+        )
+        system_content = f"{system_content}\n\n---\n\n# Reference Documents\n\n{docs_block}"
+
+    # Display parsed agent card
+    model_info = ai_cfg.get("model", "unspecified")
+    doc_names  = ", ".join(documents.keys()) if documents else "none"
+    add_message(
+        f"<strong>Agent loaded:</strong> <code>{name}</code><br/>"
+        f"<em>{description}</em><br/>"
+        f"Model hint: <code>{model_info}</code> &nbsp;·&nbsp; Documents: <code>{doc_names}</code><br/>"
+        f"<em style='font-size:.82em;opacity:.7;'>The selected tier overrides the model defined in agent.yaml.</em>",
+        role="system",
+    )
+
+    agent_log("info",  f"agent '{name}' — system prompt: {len(system_content)} chars")
+    agent_log("info",  f"model hint from yaml: {model_info} | active tier: {tier_name}")
+    agent_log("info",  f"documents injected: {', '.join(documents.keys()) if documents else 'none'}")
+    from pyscript import window as _win
+    _win.animateRoute(tier_name, "agent")
+
+    # Seed the conversation with a greeting so the agent introduces itself
+    greeting_prompt = f"Hello! Please introduce yourself briefly."
+    add_message(greeting_prompt, role="user")
+
+    _current_tools = []  # agent.yaml tools/mcp.json are informational; real MCP hookup is future work
+    _history = [
+        {"role": "system", "content": system_content},
+        {"role": "user", "content": greeting_prompt},
+    ]
+
+    agent_log("tier",  f"inference tier: {tier_name}")
+    agent_log("info",  "sending greeting — agent will introduce itself")
+
+    await run_agent_loop(tier=tier, messages=_history, tools=_current_tools, route=tier_name)
+
+    agent_log("agent_done", f"agent '{name}' ready — use the input below to chat")
+    add_message(
+        f"<em>Agent <strong>{name}</strong> is ready — type your message below to continue the conversation.</em>",
+        role="system",
+    )
 
 
 # =============================================================================

@@ -1,6 +1,6 @@
 # PyScript configuration for Router Demo
 
-packages = ["pandas"]
+packages = ["pandas", "pyyaml"]
 
 [files]
 # Load order: dependencies before dependents
@@ -14,4 +14,5 @@ packages = ["pandas"]
 "./models.py" = ""
 "./agent.py" = ""
 "./metrics.py" = ""
+"./agent_loader.py" = ""
 "./main.py" = ""
