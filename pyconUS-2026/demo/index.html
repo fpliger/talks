@@ -38,6 +38,17 @@
             --text:      #e2e4ea;
             --muted:     #6b7280;
             --code-bg:   #11131a;
+
+            /* Font scale — adjusted live via +/- buttons or Ctrl+/-  */
+            --font-scale: 1.2;
+
+            /* Split ratios — fr values for the main-area grid           */
+            /* chat col | handle | right col                             */
+            --split-chat: 1fr;
+            --split-right: 1fr;
+
+            /* Vertical split inside right-col (log vs arch), px         */
+            --vsplit-log: 50%;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -47,16 +58,19 @@
             font-size: 1.1rem;
             background: var(--bg);
             color: var(--text);
-            max-width: 960px;
+            max-width: 1920px;
             margin: 0 auto;
-            padding: 1.5rem 1.5rem 3rem;
+            padding: 1.5rem 2.5% 3rem;
             line-height: 1.6;
-            transition: max-width .25s ease, padding .25s ease;
+            transition: padding .25s ease;
         }
-        body.log-open {
-            max-width: 1440px;
-            padding-left: .75rem;
-            padding-right: .75rem;
+
+        /* focus mode — collapse header controls */
+        .ui-collapsed header,
+        .ui-collapsed .tier-selector,
+        .ui-collapsed .demo-grid,
+        .ui-collapsed #progress-container {
+            display: none !important;
         }
 
         /* ── HEADER ─────────────────────────────────────── */
@@ -171,49 +185,74 @@
         .demo-btn small { display: block; font-size: .78rem; opacity: .65; margin-top: .2rem; font-weight: 400; }
         .demo-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
 
-        /* ── MAIN AREA (chat + optional side log) ──────────── */
+        /* ── MAIN AREA (chat + divider + optional side panel) ── */
         .main-area {
-            display: flex;
-            gap: .75rem;
+            display: grid;
+            /* chat | drag-handle | right-col                           */
+            /* right-col collapses to 0 when panel is closed            */
+            grid-template-columns: var(--split-chat) 10px 0fr;
+            gap: 0;
             align-items: stretch;
         }
-        .main-area .chat-container {
-            flex: 1 1 0;
-            min-width: 0;
+        .main-area.panel-open {
+            grid-template-columns: var(--split-chat) 10px var(--split-right);
         }
-
-        /* ── LOG TOGGLE TAB ─────────────────────────────── */
-        .log-tab {
+        .main-area .chat-container {
+            min-width: 0;
+            zoom: var(--font-scale);
+        }
+        /* ── VERTICAL DRAG HANDLE (chat ↔ right-col) ─────── */
+        .col-divider {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             gap: .4rem;
-            width: 28px;
+            width: 10px;
             flex-shrink: 0;
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 8px;
-            cursor: pointer;
+            border-radius: 6px;
+            cursor: col-resize;
             padding: .5rem 0;
             transition: border-color .15s, background .15s;
             user-select: none;
+            position: relative;
         }
-        .log-tab:hover { border-color: var(--muted); background: var(--surface2); }
-        .log-tab.active {
+        .col-divider:hover { border-color: var(--muted); background: var(--surface2); }
+        .col-divider.panel-active {
             border-color: var(--local-color);
             background: color-mix(in srgb, var(--local-color) 8%, var(--surface));
         }
-        .log-tab-label {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: .65rem;
-            color: var(--muted);
-            writing-mode: vertical-rl;
-            text-orientation: mixed;
-            letter-spacing: .08em;
-            transform: rotate(180deg);
+        /* The three-dot grip */
+        .col-divider::before {
+            content: '';
+            display: block;
+            width: 3px;
+            height: 32px;
+            border-radius: 2px;
+            background: repeating-linear-gradient(
+                to bottom,
+                var(--border) 0px,
+                var(--border) 3px,
+                transparent 3px,
+                transparent 6px
+            );
         }
-        .log-tab.active .log-tab-label { color: var(--local-color); }
+        .col-divider.panel-active::before {
+            background: repeating-linear-gradient(
+                to bottom,
+                var(--local-color) 0px,
+                var(--local-color) 3px,
+                transparent 3px,
+                transparent 6px
+            );
+        }
+        /* Activity indicator dot on the handle */
+        .col-divider .log-indicator {
+            position: absolute;
+            top: .4rem;
+        }
         .log-indicator {
             width: 7px; height: 7px;
             border-radius: 50%;
@@ -227,9 +266,10 @@
         .right-col {
             display: none;
             flex-direction: column;
-            flex: 1 1 0;
             min-width: 0;
             gap: .5rem;
+            overflow: hidden;
+            zoom: var(--font-scale);
         }
         .right-col.open { display: flex; }
 
@@ -441,8 +481,8 @@
         /* lit state — each node type uses its own color */
         .arch-node.lit-llm rect        { fill: color-mix(in srgb, var(--remote-color) 18%, var(--code-bg)); stroke: var(--remote-color) !important; filter: drop-shadow(0 0 6px var(--remote-color)); }
         .arch-node.lit-llm text        { fill: var(--remote-color); }
-        .arch-node.lit-orchestrator rect { fill: color-mix(in srgb, var(--local-color) 18%, var(--code-bg)); stroke: var(--local-color) !important; filter: drop-shadow(0 0 6px var(--local-color)); }
-        .arch-node.lit-orchestrator text { fill: var(--local-color); }
+        .arch-node.lit-agent rect { fill: color-mix(in srgb, var(--local-color) 18%, var(--code-bg)); stroke: var(--local-color) !important; filter: drop-shadow(0 0 6px var(--local-color)); }
+        .arch-node.lit-agent text { fill: var(--local-color); }
         .arch-node.lit-pyodide rect    { fill: color-mix(in srgb, #a78bfa 18%, var(--code-bg)); stroke: #a78bfa !important; filter: drop-shadow(0 0 6px #a78bfa); }
         .arch-node.lit-pyodide text    { fill: #a78bfa; }
         .arch-node.lit-mcp rect        { fill: color-mix(in srgb, var(--tool-color) 18%, var(--code-bg)); stroke: var(--tool-color) !important; filter: drop-shadow(0 0 6px var(--tool-color)); }
@@ -469,6 +509,40 @@
             min-height: 0;
             max-height: none;
         }
+
+        /* ── HORIZONTAL DRAG HANDLE (log ↔ arch inside right-col) ── */
+        .row-divider {
+            height: 10px;
+            flex-shrink: 0;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: row-resize;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            transition: border-color .15s, background .15s;
+        }
+        .row-divider:hover { border-color: var(--muted); background: var(--surface2); }
+        .row-divider::before {
+            content: '';
+            display: block;
+            height: 3px;
+            width: 32px;
+            border-radius: 2px;
+            background: repeating-linear-gradient(
+                to right,
+                var(--border) 0px,
+                var(--border) 3px,
+                transparent 3px,
+                transparent 6px
+            );
+        }
+
+        /* log-panel and arch-panel sizing is now driven by --vsplit-log */
+        .log-panel  { flex: 0 0 var(--vsplit-log); min-height: 80px; }
+        .arch-panel { flex: 1 1 0; min-height: 80px; }
 
         .log-entry {
             display: flex;
@@ -651,6 +725,54 @@
             white-space: nowrap;
         }
         .cold-cache-btn:hover { border-color: var(--text); color: var(--text); }
+
+        /* ── FONT SIZE CONTROLS ──────────────────────────── */
+        .font-controls {
+            display: flex;
+            align-items: center;
+            gap: .2rem;
+        }
+        .font-btn {
+            padding: .15rem .4rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--muted);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: border-color .15s, color .15s;
+            line-height: 1;
+        }
+        .font-btn:hover { border-color: var(--text); color: var(--text); }
+        .font-size-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .68rem;
+            color: var(--muted);
+            min-width: 2.4rem;
+            text-align: center;
+        }
+
+        /* ── FOCUS SNAP BUTTONS ──────────────────────────── */
+        .focus-btn {
+            padding: .15rem .5rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--muted);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .68rem;
+            cursor: pointer;
+            transition: border-color .15s, color .15s, background .15s;
+            white-space: nowrap;
+        }
+        .focus-btn:hover { border-color: var(--text); color: var(--text); }
+        .focus-btn.active-focus {
+            border-color: var(--browser-color);
+            color: var(--browser-color);
+            background: color-mix(in srgb, var(--browser-color) 10%, transparent);
+        }
 
         /* ── PROGRESS BAR ────────────────────────────────── */
         #progress-container {
@@ -1041,12 +1163,27 @@
         <span class="metric-sep">·</span>
         <span class="metric" id="metric-ttft">TTFT: —</span>
         <span class="metric-spacer"></span>
+        <!-- UI focus mode -->
+        <button class="focus-btn" id="focus-mode-btn" onclick="toggleUiFocus()" title="Hide/show header, tier selector and demo buttons">focus mode</button>
+        <span class="metric-sep">·</span>
+        <!-- Focus snap buttons -->
+        <button class="focus-btn" id="focus-chat-btn" onclick="snapFocus('chat')" title="Expand chat panel">◀ chat</button>
+        <button class="focus-btn" id="focus-debug-btn" onclick="snapFocus('debug')" title="Expand debug panel">debug ▶</button>
+        <button class="focus-btn" id="focus-reset-btn" onclick="snapFocus('reset')" title="Reset to 50/50 split">⊡ reset</button>
+        <span class="metric-sep">·</span>
+        <!-- Font size controls -->
+        <div class="font-controls">
+            <button class="font-btn" onclick="adjustFont(-1)" title="Decrease font size">−</button>
+            <span class="font-size-display" id="font-size-display">1.2×</span>
+            <button class="font-btn" onclick="adjustFont(+1)" title="Increase font size">+</button>
+        </div>
+        <span class="metric-sep">·</span>
         <button class="cold-cache-btn" onclick="openDrawer()">⚖ Trade-offs</button>
         <span class="metric-sep">·</span>
         <button class="cold-cache-btn" onclick="clearCaches()" title="Wipe all browser caches and WebLLM model, then reload">↺ Cold reload</button>
     </div>
 
-    <div class="main-area">
+    <div class="main-area" id="main-area">
         <div class="chat-container">
             <div class="messages" id="messages">
                 <div class="message system">
@@ -1062,16 +1199,15 @@
             </div>
         </div>
 
-        <!-- Log toggle tab -->
-        <div class="log-tab" id="log-tab" onclick="toggleLog()" title="Toggle agent panel">
+        <!-- Vertical drag divider (also click-toggles the panel) -->
+        <div class="col-divider" id="col-divider" title="Drag to resize · Click to toggle panel">
             <span class="log-indicator" id="log-indicator"></span>
-            <span class="log-tab-label">agent log</span>
         </div>
 
-        <!-- Right column: log + arch diagram -->
+        <!-- Right column: log + horizontal divider + arch diagram -->
         <div class="right-col" id="right-col">
 
-            <!-- Log panel (top half) -->
+            <!-- Log panel (top, sized by --vsplit-log) -->
             <div class="log-panel" id="log-panel">
                 <div class="log-header">
                     <div class="log-header-left">
@@ -1094,7 +1230,10 @@
                 </div>
             </div>
 
-            <!-- Architecture diagram (bottom half) -->
+            <!-- Horizontal drag divider (log ↔ arch) -->
+            <div class="row-divider" id="row-divider" title="Drag to resize log vs architecture panels"></div>
+
+            <!-- Architecture diagram (bottom, takes remaining space) -->
             <div class="arch-panel">
                 <div class="arch-header">
                     <span>Agent</span>
@@ -1125,22 +1264,22 @@
                             <text x="200" y="30" text-anchor="middle" class="node-sub">prompt</text>
                         </g>
 
-                        <!-- arrow: user → orchestrator -->
+                        <!-- arrow: user → agent -->
                         <line class="arch-edge" id="edge-user-orch" x1="200" y1="38" x2="200" y2="58"/>
 
-                        <!-- Orchestrator -->
-                        <g class="arch-node" id="arch-orchestrator">
+                        <!-- Agent -->
+                        <g class="arch-node" id="arch-agent">
                             <rect x="100" y="60" width="200" height="40" rx="6"
                                   fill="#11131a" stroke="#2a2d36" stroke-width="1.5"/>
-                            <text x="200" y="75" text-anchor="middle" dy=".35em">Orchestrator</text>
+                            <text x="200" y="75" text-anchor="middle" dy=".35em">Agent</text>
                             <text x="200" y="89" text-anchor="middle" class="node-sub">PyScript · agent loop</text>
                         </g>
 
-                        <!-- arrow: orchestrator → LLM -->
+                        <!-- arrow: agent → LLM -->
                         <line class="arch-edge" id="edge-orch-llm" x1="148" y1="100" x2="65" y2="128"/>
-                        <!-- arrow: orchestrator → pyodide -->
+                        <!-- arrow: agent → pyscript -->
                         <line class="arch-edge" id="edge-orch-pyodide" x1="200" y1="100" x2="200" y2="128"/>
-                        <!-- arrow: orchestrator → mcp -->
+                        <!-- arrow: agent → mcp -->
                         <line class="arch-edge" id="edge-orch-mcp" x1="252" y1="100" x2="335" y2="128"/>
 
                         <!-- LLM node -->
@@ -1151,11 +1290,11 @@
                             <text x="65" y="163" text-anchor="middle" class="node-sub">browser · local · remote</text>
                         </g>
 
-                        <!-- Pyodide tool node -->
+                        <!-- PyScript tool node -->
                         <g class="arch-node" id="arch-pyodide">
                             <rect x="140" y="130" width="120" height="46" rx="6"
                                   fill="#11131a" stroke="#2a2d36" stroke-width="1.5"/>
-                            <text x="200" y="148" text-anchor="middle" dy=".35em">Pyodide tool</text>
+                            <text x="200" y="148" text-anchor="middle" dy=".35em">PyScript tool</text>
                             <text x="200" y="163" text-anchor="middle" class="node-sub">analyze_csv · Pandas</text>
                         </g>
 
@@ -1415,69 +1554,236 @@
             if (window.agentResumeStep) window.agentResumeStep();
         }
 
+        // ── Panel toggle & resize state ──────────────────────
+        let _panelOpen = false;
+
+        // Snap presets: [chatFr, rightFr] as numbers (equal = 1 each)
+        const SNAP_RESET = [1, 1];
+        const SNAP_CHAT  = [5.67, 1];   // ~85% chat
+        const SNAP_DEBUG = [1, 5.67];   // ~85% debug
+
+        function _applyColSplit(chatFr, rightFr) {
+            const root = document.documentElement;
+            root.style.setProperty('--split-chat',  `${chatFr}fr`);
+            root.style.setProperty('--split-right', `${rightFr}fr`);
+        }
+
         function toggleLog() {
-            const col  = document.getElementById('right-col');
-            const tab  = document.getElementById('log-tab');
-            const open = col.classList.toggle('open');
-            tab.classList.toggle('active', open);
-            document.body.classList.toggle('log-open', open);
+            const area  = document.getElementById('main-area');
+            const col   = document.getElementById('right-col');
+            const div   = document.getElementById('col-divider');
+            _panelOpen  = col.classList.toggle('open');
+            div.classList.toggle('panel-active', _panelOpen);
+            area.classList.toggle('panel-open', _panelOpen);
+            document.body.classList.toggle('log-open', _panelOpen);
+            // Reset snap state when toggling
+            _applyColSplit(1, 1);
+            document.getElementById('focus-chat-btn').classList.remove('active-focus');
+            document.getElementById('focus-debug-btn').classList.remove('active-focus');
+            document.getElementById('focus-reset-btn').classList.remove('active-focus');
+        }
+
+        // ── Focus snap buttons ───────────────────────────────
+        function snapFocus(mode) {
+            if (!_panelOpen) {
+                // Open the panel first
+                toggleLog();
+            }
+            const chatBtn  = document.getElementById('focus-chat-btn');
+            const dbgBtn   = document.getElementById('focus-debug-btn');
+            const rstBtn   = document.getElementById('focus-reset-btn');
+            chatBtn.classList.remove('active-focus');
+            dbgBtn.classList.remove('active-focus');
+            rstBtn.classList.remove('active-focus');
+
+            if (mode === 'chat') {
+                _applyColSplit(...SNAP_CHAT);
+                chatBtn.classList.add('active-focus');
+            } else if (mode === 'debug') {
+                _applyColSplit(...SNAP_DEBUG);
+                dbgBtn.classList.add('active-focus');
+            } else {
+                _applyColSplit(...SNAP_RESET);
+                rstBtn.classList.add('active-focus');
+            }
+        }
+
+        // ── Vertical col-resize drag ─────────────────────────
+        (function() {
+            const divider = document.getElementById('col-divider');
+            let _dragging = false;
+            let _startX, _startChatW, _startRightW;
+            let _clickMoved = false;
+
+            divider.addEventListener('mousedown', e => {
+                if (!_panelOpen) return; // only drag when panel is open
+                _dragging = true;
+                _clickMoved = false;
+                _startX = e.clientX;
+                const area = document.getElementById('main-area');
+                const chat = document.querySelector('.chat-container');
+                const right = document.getElementById('right-col');
+                _startChatW  = chat.getBoundingClientRect().width;
+                _startRightW = right.getBoundingClientRect().width;
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', e => {
+                if (!_dragging) return;
+                const dx = e.clientX - _startX;
+                if (Math.abs(dx) > 3) _clickMoved = true;
+                const newChat  = Math.max(120, _startChatW  + dx);
+                const newRight = Math.max(120, _startRightW - dx);
+                _applyColSplit(newChat, newRight);
+                // Clear focus button active state when manually dragging
+                document.getElementById('focus-chat-btn').classList.remove('active-focus');
+                document.getElementById('focus-debug-btn').classList.remove('active-focus');
+                document.getElementById('focus-reset-btn').classList.remove('active-focus');
+            });
+
+            document.addEventListener('mouseup', e => {
+                if (!_dragging) return;
+                _dragging = false;
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                // If the mouse barely moved, treat it as a click → toggle
+                if (!_clickMoved) toggleLog();
+            });
+
+            // Double-click resets to 50/50
+            divider.addEventListener('dblclick', () => {
+                if (_panelOpen) snapFocus('reset');
+            });
+        })();
+
+        // ── Horizontal row-resize drag (log ↔ arch) ──────────
+        (function() {
+            const divider = document.getElementById('row-divider');
+            let _dragging = false;
+            let _startY, _startLogH;
+
+            divider.addEventListener('mousedown', e => {
+                _dragging = true;
+                _startY = e.clientY;
+                // getBoundingClientRect returns zoomed pixels; divide back to CSS px
+                _startLogH = document.getElementById('log-panel').getBoundingClientRect().height / _fontScale;
+                document.body.style.cursor = 'row-resize';
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', e => {
+                if (!_dragging) return;
+                // Mouse delta is in screen px; divide by zoom to get CSS px
+                const dy = (e.clientY - _startY) / _fontScale;
+                const newH = Math.max(60, _startLogH + dy);
+                document.documentElement.style.setProperty('--vsplit-log', `${newH}px`);
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (!_dragging) return;
+                _dragging = false;
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            });
+
+            // Double-click resets to 50%
+            divider.addEventListener('dblclick', () => {
+                document.documentElement.style.setProperty('--vsplit-log', '50%');
+            });
+        })();
+
+        // ── Font size controls ───────────────────────────────
+        const FONT_MIN = 0.8;
+        const FONT_MAX = 2.0;
+        const FONT_STEP = 0.1;
+        let _fontScale = 1.2;
+
+        function _applyFont(scale) {
+            _fontScale = Math.max(FONT_MIN, Math.min(FONT_MAX, scale));
+            document.documentElement.style.setProperty('--font-scale', _fontScale.toFixed(1));
+            document.getElementById('font-size-display').textContent = `${_fontScale.toFixed(1)}×`;
+        }
+
+        function adjustFont(delta) {
+            _applyFont(_fontScale + delta * FONT_STEP);
+            // Re-sync row divider position so it stays accurate after zoom change
+            const logH = document.getElementById('log-panel').getBoundingClientRect().height;
+            document.documentElement.style.setProperty('--vsplit-log', `${logH / _fontScale}px`);
+        }
+
+        // ── UI focus mode (hide header + controls) ───────────
+        let _uiFocused = false;
+        function toggleUiFocus() {
+            _uiFocused = !_uiFocused;
+            document.body.classList.toggle('ui-collapsed', _uiFocused);
+            document.getElementById('focus-mode-btn').classList.toggle('active-focus', _uiFocused);
+            // Recalculate --main-top so the main area fills correctly
+            _setMainTop();
         }
 
         // ── Arch diagram highlight ───────────────────────────
-        // node: 'user' | 'orchestrator' | 'llm' | 'pyodide' | 'mcp'
-        // type: 'lit-user' | 'lit-orchestrator' | 'lit-llm' | 'lit-pyodide' | 'lit-mcp'
+        // node: 'user' | 'agent' | 'llm' | 'pyodide' | 'mcp'
+        // type: 'lit-user' | 'lit-agent' | 'lit-llm' | 'lit-pyodide' | 'lit-mcp'
         const ARCH_LIT = {
-            user:         'lit-user',
-            orchestrator: 'lit-orchestrator',
-            llm:          'lit-llm',
-            pyodide:      'lit-pyodide',
-            mcp:          'lit-mcp',
+            user:    'lit-user',
+            agent:   'lit-agent',
+            llm:     'lit-llm',
+            pyodide: 'lit-pyodide',
+            mcp:     'lit-mcp',
         };
         const ARCH_EDGES = {
-            'user-orchestrator': 'edge-user-orch',
-            'orchestrator-llm':  'edge-orch-llm',
-            'orchestrator-pyodide': 'edge-orch-pyodide',
-            'orchestrator-mcp':  'edge-orch-mcp',
+            'user-agent':    'edge-user-orch',
+            'agent-llm':     'edge-orch-llm',
+            'agent-pyodide': 'edge-orch-pyodide',
+            'agent-mcp':     'edge-orch-mcp',
         };
         const _litTimers = {};
 
         // Activate a node and hold it lit until agentDeactivate is called.
         window.agentActivate = (node) => {
-            const el = document.getElementById(`arch-${node}`);
+            const n = String(node);
+            const el = document.getElementById(`arch-${n}`);
+            console.log('[arch] agentActivate', n, 'el=', el, 'type=', typeof node);
             if (!el) return;
-            const cls = ARCH_LIT[node] || 'lit-orchestrator';
-            clearTimeout(_litTimers[node]);   // cancel any pending auto-remove
+            const cls = ARCH_LIT[n] || 'lit-agent';
+            clearTimeout(_litTimers[n]);
             el.classList.add(cls);
         };
 
         // Remove the persistent lit state from a node.
         window.agentDeactivate = (node) => {
-            const el = document.getElementById(`arch-${node}`);
+            const n = String(node);
+            const el = document.getElementById(`arch-${n}`);
             if (!el) return;
-            const cls = ARCH_LIT[node] || 'lit-orchestrator';
+            const cls = ARCH_LIT[n] || 'lit-agent';
             el.classList.remove(cls);
         };
 
         // Pulse an edge briefly (and optionally flash a node once).
         window.agentHighlight = (node, edgeKey) => {
             // Flash node only if not already held active
-            if (node) {
-                const el = document.getElementById(`arch-${node}`);
-                if (el && !el.classList.contains(ARCH_LIT[node])) {
-                    const cls = ARCH_LIT[node] || 'lit-orchestrator';
+            if (node && node !== 'null' && node !== 'None' && node !== '') {
+                const n = String(node);
+                const el = document.getElementById(`arch-${n}`);
+                if (el && !el.classList.contains(ARCH_LIT[n])) {
+                    const cls = ARCH_LIT[n] || 'lit-agent';
                     el.classList.add(cls);
-                    clearTimeout(_litTimers[node]);
-                    _litTimers[node] = setTimeout(() => el.classList.remove(cls), 1800);
+                    clearTimeout(_litTimers[n]);
+                    _litTimers[n] = setTimeout(() => el.classList.remove(cls), 1800);
                 }
             }
             // Pulse edge
             if (edgeKey) {
-                const edgeId = ARCH_EDGES[edgeKey];
+                const ek = String(edgeKey);
+                const edgeId = ARCH_EDGES[ek];
                 const edge = edgeId && document.getElementById(edgeId);
                 if (edge) {
                     edge.classList.add('lit');
-                    clearTimeout(_litTimers[edgeKey]);
-                    _litTimers[edgeKey] = setTimeout(() => edge.classList.remove('lit'), 1000);
+                    clearTimeout(_litTimers[ek]);
+                    _litTimers[ek] = setTimeout(() => edge.classList.remove('lit'), 1000);
                 }
             }
         };

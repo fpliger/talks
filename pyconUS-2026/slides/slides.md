@@ -126,7 +126,7 @@ What <em style="color: var(--browser); font-style: normal;">is</em><br/>
 an agent?
 </div>
 
-<div style="margin-top: 2.5rem; color: var(--muted); font-size: 1rem;">4 parts &middot; 1 loop</div>
+<!-- <div style="margin-top: 2.5rem; color: var(--muted); font-size: 1rem;">4 parts &middot; 1 loop</div> -->
 
 <div class="timing">00:15 · t+02:00</div>
 
@@ -233,7 +233,7 @@ title: Anatomy (Continued) — four parts
 </div>
 <div class="cell loop">
 <div class="label">drives</div>
-<div class="desc">PyScript  (WASM|JS|...)  &mdash; Python running in the user's tab.</div>
+<div class="desc">PyScript  (WASM|JS|...) Python running in the user's tab.</div>
 </div>
 <div class="invariant"><strong>Same architecture.</strong> Different implementation details.</div>
 </div>
@@ -333,7 +333,7 @@ Step mode toggle is ON. Architecture panel visible on the right.
 -->
 
 ---
-title: Demo 2 — agent + tools
+title: Demo — agent + tools
 layout: full
 ---
 
@@ -341,7 +341,7 @@ layout: full
 <div style="display: flex; flex-direction: column; justify-content: center; padding: 1.5rem 1rem 1.5rem 2.5rem;">
 <div class="section-eyebrow">What to watch</div>
 <h2 style="font-size: 1.5rem; margin-bottom: 0.75rem; line-height: 1.2;">
-Demo 2 — agent + tools<br/>
+Demo — agent + tools<br/>
 <span style="color: var(--muted); font-weight: 400; font-size: 0.78rem; font-family: 'JetBrains Mono', monospace;">step mode &middot; remote tier</span>
 </h2>
 <ol style="font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; list-style: none; padding: 0; line-height: 1.35;">
@@ -394,7 +394,7 @@ Where does<br/>
 <span style="color: var(--browser);">the model</span> run?
 </div>
 
-<div style="margin-top: 2.5rem; color: var(--muted); font-size: 1rem;">Three tiers &middot; one architecture</div>
+<!-- <div style="margin-top: 2.5rem; color: var(--muted); font-size: 1rem;">Three tiers</div> -->
 
 <div class="timing">00:15 · t+11:45</div>
 
@@ -449,7 +449,7 @@ Bridge to next slide: "Same demo, three tiers. Watch."
 -->
 
 ---
-title: Demo 1 — CSV analysis
+title: Demo — CSV analysis
 layout: full
 ---
 
@@ -457,7 +457,7 @@ layout: full
 <div style="display: flex; flex-direction: column; justify-content: center; padding: 1.5rem 1rem 1.5rem 2.5rem;">
 <div class="section-eyebrow">What to watch</div>
 <h2 style="font-size: 1.5rem; margin-bottom: 0.75rem; line-height: 1.2;">
-Demo 1 — CSV analysis<br/>
+Demo — CSV analysis<br/>
 <span style="color: var(--muted); font-weight: 400; font-size: 0.78rem; font-family: 'JetBrains Mono', monospace;">Pyodide Pandas · any tier</span>
 </h2>
 <ol style="font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; list-style: none; padding: 0; line-height: 1.35;">
@@ -493,7 +493,7 @@ The model only saw the summary — private by construction."
 -->
 
 ---
-title: Demo 3 — folder agent
+title: Demo — folder agent
 layout: full
 ---
 
@@ -501,11 +501,11 @@ layout: full
 <div style="display: flex; flex-direction: column; justify-content: center; padding: 1.5rem 1rem 1.5rem 2.5rem;">
 <div class="section-eyebrow">What to watch</div>
 <h2 style="font-size: 1.5rem; margin-bottom: 0.75rem; line-height: 1.2;">
-Demo 3 — folder agent<br/>
+Demo — folder agent<br/>
 <span style="color: var(--muted); font-weight: 400; font-size: 0.78rem; font-family: 'JetBrains Mono', monospace;">load agent.yaml from disk · remote tier</span>
 </h2>
 <ol style="font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; list-style: none; padding: 0; line-height: 1.35;">
-<li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem;"><span style="color: var(--muted); flex-shrink: 0;">①</span><span>Click Demo 3 → browser opens a <span style="color: var(--browser);">folder picker</span></span></li>
+<li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem;"><span style="color: var(--muted); flex-shrink: 0;">①</span><span>Click Demo → browser opens a <span style="color: var(--browser);">folder picker</span></span></li>
 <li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem;"><span style="color: var(--muted); flex-shrink: 0;">②</span><span>Select <code>fred-example-agent/</code> from disk</span></li>
 <li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem;"><span style="color: var(--muted); flex-shrink: 0;">③</span><span>Python reads <code>agent.yaml</code> + <code>documents/</code> in the browser</span></li>
 <li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem;"><span style="color: var(--muted); flex-shrink: 0;">④</span><span>System prompt &amp; docs injected into <code>messages[]</code></span></li>
@@ -589,7 +589,7 @@ title: Why now — three numbers
 </div>
 <div class="row r3">
 <div class="num">97M<span style="font-size: 1.4rem; color: var(--muted);">/mo</span></div>
-<div class="label"><strong style="color: var(--tool);">MCP became a standard</strong><small>Anthropic SDK downloads. 9,400+ public MCP servers, +18% MoM.</small></div>
+<div class="label"><strong style="color: var(--tool);">MCP became a standard</strong><small>Anthropic SDK downloads. 9k+ public MCP servers.</small></div>
 </div>
 <div class="punch">Each one alone wouldn't move the needle. <strong>Together, they unlock this.</strong></div>
 </div>
@@ -628,7 +628,7 @@ title: Trade-offs — measured
 <tr><th>Dimension</th><th>In-browser</th><th>Local</th><th>Remote</th></tr>
 </thead>
 <tbody>
-<tr><td>Latency (TTFT)</td><td><span class="pill yellow">~210 ms</span></td><td><span class="pill green">~85 ms</span></td><td><span class="pill blue">~11 ms</span></td></tr>
+<tr><td>Latency (TTFT)</td><td><span class="pill yellow">~slow</span></td><td><span class="pill green">~slowish</span></td><td><span class="pill blue">~fast</span></td></tr>
 <tr><td>Model ceiling</td><td><span class="pill yellow">1–3 B</span></td><td><span class="pill yellow">7–70 B</span></td><td><span class="pill green">frontier</span></td></tr>
 <tr><td>Tool-call quality</td><td><span class="pill red">poor at 1B</span></td><td><span class="pill yellow">good at 8B+</span></td><td><span class="pill green">excellent</span></td></tr>
 <tr><td>Privacy</td><td><span class="pill teal">on-device</span></td><td><span class="pill teal">on-device</span></td><td><span class="pill red">data leaves</span></td></tr>
@@ -638,7 +638,7 @@ title: Trade-offs — measured
 </tbody>
 </table>
 
-<p style="color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; margin-top: 1.25rem; text-align: center;">Bundle: 11.4 MB · Cold start: 8.2 s · Warm: 1.1 s &nbsp;&middot;&nbsp; measured on M2 MacBook Pro, Chrome 124</p>
+<!-- <p style="color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; margin-top: 1.25rem; text-align: center;">Bundle: 11.4 MB · Cold start: 8.2 s · Warm: 1.1 s &nbsp;&middot;&nbsp; measured on M2 MacBook Pro, Chrome 124</p> -->
 
 <div class="timing">02:30 · t+21:45</div>
 
@@ -709,17 +709,17 @@ layout: center
 <div class="cta">
 <div>
 <div class="section-eyebrow">Take it home</div>
-<h2>Try it.</h2>
-<p style="color: var(--muted); font-size: 1.05rem; line-height: 1.55; max-width: 32ch;">The whole demo &mdash; routing, agent loop, MCP, three tiers &mdash; is open source. Clone it, run it, change it.</p>
-<ol>
+<h2>Try it. (soon! 🙈)</h2>
+<p style="color: var(--muted); font-size: 1.05rem; line-height: 1.55; max-width: 32ch;">Soon to be available on Github</p>
+<!-- <ol>
 <li><span style="color: var(--browser);">git clone</span> the repo</li>
 <li><span style="color: var(--local);">./run.sh</span> &mdash; servers + static</li>
 <li><span style="color: var(--remote);">open</span> http://localhost:8000</li>
 </ol>
-<p style="color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; margin-top: 1.25rem;">Five minutes. No accounts. No GPUs. No bill.</p>
+<p style="color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; margin-top: 1.25rem;">Five minutes. No accounts. No GPUs. No bill.</p> -->
 </div>
 <div class="qr-card">
-<div class="qr">[ QR &rarr; repo ]<br/><span style="margin-top: 0.4rem; display: block;">replace before talk</span></div>
+<!-- <div class="qr">[ QR &rarr; repo ]<br/><span style="margin-top: 0.4rem; display: block;">replace before talk</span></div> -->
 <div class="url">github.com/fpliger/<br/>pyconus-2026-agent</div>
 </div>
 </div>
@@ -741,7 +741,7 @@ If running long: cut to the next slide immediately. The CTA can be
 -->
 
 ---
-title: Closing — Q&A
+title: Closing1 — Q&A
 layout: center
 class: text-center
 ---
@@ -752,10 +752,54 @@ An agent is a loop.<br/>
 The browser ships them.
 </div>
 
+<!-- <div style="margin-top: 3rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; letter-spacing: 0.05em;">Questions?</div>
+
+<div style="margin-top: 4rem; display: flex; justify-content: center; gap: 2.5rem; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: var(--muted);">
+<span>@b_smoke</span>
+<span>github.com/fpliger</span>
+<span>pyscript.net</span>
+</div> -->
+
+<div class="timing">00:45 · t+25:00 &middot; Q&A starts</div>
+
+<!--
+SLIDE 17 — CLOSING + Q&A.   24:15–25:00.   ~45s.
+
+Callback to the thesis. Three short lines: agent / Python / browser.
+
+Then "Questions?" — and you're into Q&A. Leave this slide up the
+whole time so the contact info is visible.
+
+If Q&A drags, you have these in your back pocket:
+  - "What about WebNN?" → Candidate Recommendation Jan 2026, Chrome
+    + Edge shipping, Safari/Firefox not yet. ~2027 default.
+  - "Why not just JavaScript?" → JS is fine. The talk is about giving
+    Python developers an on-ramp; the architecture works in either.
+  - "What about security?" → Browser sandbox is the strongest privacy
+    guarantee you can ship. Tools are explicit. Tabs can't see other
+    tabs.
+  - "What about training?" → Out of scope. This is inference + agent
+    orchestration, not training pipelines.
+  - "Bundle size won't get smaller, will it?" → Pyodide team is
+    actively trimming. MicroPython variant is 303 KB if you can live
+    without the stdlib. Real answer: cache aggressively.
+-->
+
+
+---
+title: Closing — Q&A
+layout: center
+class: text-center
+---
+
+<div class="big-thesis" style="font-size: 3.2rem; max-width: 28ch;">
+Thank you!
+</div>
+
 <div style="margin-top: 3rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; letter-spacing: 0.05em;">Questions?</div>
 
 <div style="margin-top: 4rem; display: flex; justify-content: center; gap: 2.5rem; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: var(--muted);">
-<span>@bugzpodder</span>
+<span>@b_smoke</span>
 <span>github.com/fpliger</span>
 <span>pyscript.net</span>
 </div>

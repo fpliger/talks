@@ -128,8 +128,8 @@ async def run_agent_loop(
     on_tool_call = on_tool_call or (lambda tc: None)
     on_tool_result = on_tool_result or (lambda tc, r: None)
 
-    agent_activate("user", "user-orchestrator")
-    agent_activate("orchestrator")
+    agent_activate("user", "user-agent")
+    agent_activate("agent")
     turn_num = 0
     _push_context(messages)
 
@@ -141,7 +141,7 @@ async def run_agent_loop(
         # ① Before sending anything to the LLM
         await _checkpoint(f"turn {turn_num}: about to send {n_msgs} message(s) to {tier.name} LLM")
 
-        agent_activate("llm", "orchestrator-llm")
+        agent_activate("llm", "agent-llm")
         agent_log("llm_start", f"LLM turn {turn_num} started ({tier.name})")
         bubble = add_streaming_message(route=route)
         collected_tool_calls: list[ToolCall] = []
@@ -176,12 +176,12 @@ async def run_agent_loop(
                         "or <strong>local</strong> tier.",
                         role="system",
                     )
-                    agent_deactivate("orchestrator")
+                    agent_deactivate("agent")
                     agent_deactivate("user")
                     return
                 # ② Normal stop — pause so it can be read before loop exits
                 await _checkpoint(f"turn {turn_num}: LLM delivered final answer ({token_count} token(s)) — loop will end")
-                agent_deactivate("orchestrator")
+                agent_deactivate("agent")
                 agent_deactivate("user")
                 return
             if delta.finish_reason == "tool_calls":
@@ -198,7 +198,7 @@ async def run_agent_loop(
                 messages.append({"role": "assistant", "content": assistant_text})
                 _push_context(messages)
             await _checkpoint(f"turn {turn_num}: stream ended (implicit stop, no tool calls) — loop will end")
-            agent_deactivate("orchestrator")
+            agent_deactivate("agent")
             agent_deactivate("user")
             return
 
@@ -213,9 +213,9 @@ async def run_agent_loop(
             agent_log("tool_call", f"dispatching → {tc.name}({json.dumps(tc.args)})")
 
             if tc.name in _pyodide_tool_names:
-                agent_activate("pyodide", "orchestrator-pyodide")
+                agent_activate("pyodide", "agent-pyodide")
             else:
-                agent_activate("mcp", "orchestrator-mcp")
+                agent_activate("mcp", "agent-mcp")
 
             # ④ Right before each individual tool executes
             await _checkpoint(f"about to run: {tc.name}({json.dumps(tc.args)})")
@@ -248,5 +248,5 @@ async def run_agent_loop(
         await _checkpoint(f"{n_results} tool result(s) now in context — about to call {tier.name} LLM (turn {turn_num + 1})")
 
     # max_turns reached
-    agent_deactivate("orchestrator")
+    agent_deactivate("agent")
     agent_deactivate("user")

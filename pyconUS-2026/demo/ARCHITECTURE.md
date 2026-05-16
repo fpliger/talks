@@ -2,7 +2,7 @@
 
 ## Overview
 
-A hybrid AI agent running entirely in the browser, orchestrated by Python (PyScript). The agent routes requests to local or remote models based on task complexity, and can call external tools via MCP.
+An AI agent loop running entirely in the browser, driven by Python (PyScript). The agent routes requests to in-browser, local, or remote models, and can call external tools via MCP.
 
 ---
 
@@ -110,69 +110,49 @@ def route_request(prompt: str) -> str:
 
 ## Three Demo Paths
 
-### Demo 1: Local Only
+### Demo 1: CSV Analysis (in-browser)
 ```
-User: "Convert this date to ISO format: May 5, 2026"
+User: "Analyze sales.csv and write an executive summary"
   │
   ▼
-Router: "Simple task" → LOCAL path
+LLM calls analyze_csv tool (Pandas, runs in Pyodide)
   │
   ▼
-Local Model (WebLLM/Mock): "2026-05-05"
+Tool result: {rows, revenue, top_product, QoQ growth}
   │
   ▼
-Display with [LOCAL] badge
-```
-
-### Demo 2: Hybrid
-```
-User: "Summarize this CSV"
-  │
-  ▼
-Router: "Data + reasoning" → HYBRID path
-  │
-  ├──▶ Local: Pandas analyzes data
-  │         │
-  │         ▼
-  │    {rows: 1247, revenue: $2.4M, ...}
-  │
-  └──▶ Remote: Model frames the analysis
-              │
-              ▼
-         "Executive summary: Revenue grew 12%..."
-  │
-  ▼
-Display with [HYBRID] badge
+LLM streams 3-sentence summary
 ```
 
-### Demo 3: Remote + Tools
+### Demo 2: Agent + MCP Tools
 ```
-User: "Find climate stories and save to notes"
+User: "Find top climate stories and save to notes"
   │
   ▼
-Router: "Needs tools" → REMOTE path
+LLM calls web_search("climate news")
   │
   ▼
-MCP: List available tools
+[search results injected into context]
   │
   ▼
-Remote Model: Plans tool calls
-  │
-  ├──▶ Tool: web_search("climate news")
-  │         │
-  │         ▼
-  │    [search results]
-  │
-  └──▶ Tool: save_to_file("notes.txt")
-              │
-              ▼
-         [saved]
+LLM calls save_to_file("notes.md", content)
+  │   (intercepted — File System Access API writes to user's disk)
+  ▼
+LLM streams final summary
+```
+
+### Demo 3: Folder Agent
+```
+User picks a local folder (agent.yaml + documents/)
   │
   ▼
-Remote Model: Summarizes results
+JS reads folder via File System Access API
   │
   ▼
-Display with [REMOTE] + [TOOL] badges
+Python parses agent.yaml, injects documents into system prompt
+  │
+  ▼
+Agent instantiated — greets user, ready for conversation
 ```
 
 ---
@@ -184,10 +164,11 @@ Display with [REMOTE] + [TOOL] badges
 - **Implementation**: Pattern matching on keywords
 - **Extensible**: Could use a classifier model for smarter routing
 
-### Model Gateway
-- **Local**: WebLLM running Llama-3.2-1B via WebGPU
-- **Remote**: Any OpenAI-compatible API via fetch
-- **Interface**: Both expose `.generate(messages)` → response
+### Tier Gateway (`tiers.py`)
+- **In-browser**: WebLLM running Qwen2.5-1.5B via WebGPU
+- **Local**: `fetch` to `localhost:11434/v1/chat/completions` (Ollama / any OpenAI-compatible)
+- **Remote**: same SSE path; uses `REMOTE_API_KEY` if set, falls back to mock SSE server on `:8766`
+- **Interface**: all three expose `async def stream_chat(messages, tools) → AsyncIterator[Delta]`
 
 ### MCP Client
 - **Protocol**: HTTP-based MCP (not the SDK directly)
@@ -197,9 +178,9 @@ Display with [REMOTE] + [TOOL] badges
 ### Tool Types
 | Type | Example | Runs Where |
 |------|---------|------------|
-| MCP Tools | web_search, save_file | External server |
-| Python-native | Pandas analysis | In browser (Pyodide) |
-| DOM Tools | Read page content | Browser APIs |
+| MCP tools | web_search, save_to_file | External MCP server (HTTP) |
+| PyScript-native | analyze_csv (Pandas) | In-browser (Pyodide) |
+| FS bridge | save_to_file intercept | Browser File System Access API |
 
 ---
 

@@ -139,30 +139,33 @@ def agent_log(type: str, text: str):
 def agent_activate(node: str, edge: str = ""):
     """Hold a node lit until agent_deactivate() is called. Optionally pulse an edge."""
     from pyscript import window
+    from pyodide.ffi import to_js
     try:
-        window.agentActivate(node)
+        window.agentActivate(to_js(node))
         if edge:
-            window.agentHighlight(None, edge)
-    except Exception:
-        pass
+            window.agentHighlight(to_js(""), to_js(edge))
+    except Exception as e:
+        print(f"[agent_activate] error: {e}")
 
 
 def agent_deactivate(node: str):
     """Remove the persistent lit state from a node."""
     from pyscript import window
+    from pyodide.ffi import to_js
     try:
-        window.agentDeactivate(node)
-    except Exception:
-        pass
+        window.agentDeactivate(to_js(node))
+    except Exception as e:
+        print(f"[agent_deactivate] error: {e}")
 
 
 def agent_highlight(node: str, edge: str = ""):
     """Pulse a node briefly and/or flash an edge. Use agent_activate for sustained state."""
     from pyscript import window
+    from pyodide.ffi import to_js
     try:
-        window.agentHighlight(node, edge or None)
-    except Exception:
-        pass
+        window.agentHighlight(to_js(node) if node else to_js(""), to_js(edge) if edge else to_js(""))
+    except Exception as e:
+        print(f"[agent_highlight] error: {e}")
 
 
 def update_status(status, text):
