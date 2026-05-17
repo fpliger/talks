@@ -1746,7 +1746,7 @@
         window.agentActivate = (node) => {
             const n = String(node);
             const el = document.getElementById(`arch-${n}`);
-            console.log('[arch] agentActivate', n, 'el=', el, 'type=', typeof node);
+
             if (!el) return;
             const cls = ARCH_LIT[n] || 'lit-agent';
             clearTimeout(_litTimers[n]);
