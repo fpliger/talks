@@ -1,0 +1,2171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>AI Router Demo — PyCon US 2026</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://pyscript.net/releases/2026.2.1/core.css">
+    <script type="module" src="https://pyscript.net/releases/2026.2.1/core.js"></script>
+
+    <script type="module">
+        import * as webllm from "https://esm.run/@mlc-ai/web-llm";
+        window.webllm = webllm;
+        window.webllmLoaded = true;
+        if (webllm.prebuiltAppConfig?.model_list) {
+            window.webllmModels = webllm.prebuiltAppConfig.model_list.map(m => m.model_id);
+        }
+        console.log("WebLLM loaded:", Object.keys(webllm).join(", "));
+    </script>
+
+    <style>
+        :root {
+            --main-top: 320px; /* overwritten by JS after DOMContentLoaded */
+            --browser-color: #1de9b6;
+            --local-color:   #69f0ae;
+            --remote-color:  #448aff;
+            --hybrid-color:  #e040fb;
+            --tool-color:    #ffab40;
+
+            --bg:        #0d0f14;
+            --surface:   #161920;
+            --surface2:  #1e2129;
+            --border:    #2a2d36;
+            --text:      #e2e4ea;
+            --muted:     #6b7280;
+            --code-bg:   #11131a;
+
+            /* Font scale — adjusted live via +/- buttons or Ctrl+/-  */
+            --font-scale: 1.2;
+
+            /* Split ratios — fr values for the main-area grid           */
+            /* chat col | handle | right col                             */
+            --split-chat: 1fr;
+            --split-right: 1fr;
+
+            /* Vertical split inside right-col (log vs arch), px         */
+            --vsplit-log: 50%;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            font-size: 1.1rem;
+            background: var(--bg);
+            color: var(--text);
+            max-width: 1920px;
+            margin: 0 auto;
+            padding: 1.5rem 2.5% 3rem;
+            line-height: 1.6;
+            transition: padding .25s ease;
+        }
+
+        /* focus mode — collapse header controls */
+        .ui-collapsed header,
+        .ui-collapsed .tier-selector,
+        .ui-collapsed .demo-grid,
+        .ui-collapsed #progress-container {
+            display: none !important;
+        }
+
+        /* ── HEADER ─────────────────────────────────────── */
+        header {
+            text-align: center;
+            padding: 1.5rem 0 2rem;
+        }
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            letter-spacing: -.02em;
+            color: #fff;
+        }
+        .subtitle {
+            color: var(--muted);
+            font-size: .9rem;
+            margin-top: .3rem;
+        }
+
+        /* ── GLOBAL TIER SELECTOR ────────────────────────── */
+        .tier-selector {
+            display: flex;
+            gap: .75rem;
+            margin-bottom: 1rem;
+        }
+        .tier-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            padding: .7rem 1rem;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface);
+            color: var(--muted);
+            cursor: pointer;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .88rem;
+            font-weight: 500;
+            transition: all .15s;
+            user-select: none;
+        }
+        .tier-btn:hover:not(:disabled) {
+            border-color: var(--text);
+            color: var(--text);
+        }
+        .tier-btn.active[data-tier="in-browser"] {
+            border-color: var(--browser-color);
+            background: color-mix(in srgb, var(--browser-color) 12%, var(--surface));
+            color: var(--browser-color);
+            box-shadow: 0 0 14px color-mix(in srgb, var(--browser-color) 35%, transparent);
+        }
+        .tier-btn.active[data-tier="local"] {
+            border-color: var(--local-color);
+            background: color-mix(in srgb, var(--local-color) 12%, var(--surface));
+            color: var(--local-color);
+            box-shadow: 0 0 14px color-mix(in srgb, var(--local-color) 35%, transparent);
+        }
+        .tier-btn.active[data-tier="remote"] {
+            border-color: var(--remote-color);
+            background: color-mix(in srgb, var(--remote-color) 12%, var(--surface));
+            color: var(--remote-color);
+            box-shadow: 0 0 14px color-mix(in srgb, var(--remote-color) 35%, transparent);
+        }
+        .tier-btn:disabled {
+            opacity: .35;
+            cursor: not-allowed;
+        }
+        .tier-btn .tier-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--border);
+            flex-shrink: 0;
+            transition: background .3s;
+        }
+        .tier-btn .tier-dot.checking { background: #ffc107; animation: pulse 1s ease-in-out infinite; }
+        .tier-btn .tier-dot.ready    { background: var(--local-color); }
+        .tier-btn .tier-dot.error    { background: #ef5350; }
+        .tier-btn .tier-label { flex: 1; }
+        .tier-btn .tier-status {
+            font-size: .72rem;
+            opacity: .7;
+            font-weight: 400;
+        }
+
+        /* ── DEMO BUTTONS ────────────────────────────────── */
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .demo-btn {
+            padding: .85rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface);
+            color: var(--text);
+            cursor: pointer;
+            font-size: .9rem;
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
+            transition: transform .15s, box-shadow .15s, background .15s, border-color .15s;
+            text-align: left;
+            line-height: 1.4;
+        }
+        .demo-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,.4);
+            background: var(--surface2);
+        }
+        .demo-btn small { display: block; font-size: .78rem; opacity: .65; margin-top: .2rem; font-weight: 400; }
+        .demo-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+        /* ── MAIN AREA (chat + divider + optional side panel) ── */
+        .main-area {
+            display: grid;
+            /* chat | drag-handle | right-col                           */
+            /* right-col collapses to 0 when panel is closed            */
+            grid-template-columns: var(--split-chat) 10px 0fr;
+            gap: 0;
+            align-items: stretch;
+        }
+        .main-area.panel-open {
+            grid-template-columns: var(--split-chat) 10px var(--split-right);
+        }
+        .main-area .chat-container {
+            min-width: 0;
+            zoom: var(--font-scale);
+        }
+        /* ── VERTICAL DRAG HANDLE (chat ↔ right-col) ─────── */
+        .col-divider {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: .4rem;
+            width: 10px;
+            flex-shrink: 0;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: col-resize;
+            padding: .5rem 0;
+            transition: border-color .15s, background .15s;
+            user-select: none;
+            position: relative;
+        }
+        .col-divider:hover { border-color: var(--muted); background: var(--surface2); }
+        .col-divider.panel-active {
+            border-color: var(--local-color);
+            background: color-mix(in srgb, var(--local-color) 8%, var(--surface));
+        }
+        /* The three-dot grip */
+        .col-divider::before {
+            content: '';
+            display: block;
+            width: 3px;
+            height: 32px;
+            border-radius: 2px;
+            background: repeating-linear-gradient(
+                to bottom,
+                var(--border) 0px,
+                var(--border) 3px,
+                transparent 3px,
+                transparent 6px
+            );
+        }
+        .col-divider.panel-active::before {
+            background: repeating-linear-gradient(
+                to bottom,
+                var(--local-color) 0px,
+                var(--local-color) 3px,
+                transparent 3px,
+                transparent 6px
+            );
+        }
+        /* Activity indicator dot on the handle */
+        .col-divider .log-indicator {
+            position: absolute;
+            top: .4rem;
+        }
+        .log-indicator {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: var(--border);
+            transition: background .3s;
+            flex-shrink: 0;
+        }
+        .log-indicator.active { background: var(--local-color); animation: pulse 1s ease-in-out infinite; }
+
+        /* ── RIGHT COLUMN (log + arch diagram) ──────────── */
+        .right-col {
+            display: none;
+            flex-direction: column;
+            min-width: 0;
+            gap: .5rem;
+            overflow: hidden;
+            zoom: var(--font-scale);
+        }
+        .right-col.open { display: flex; }
+
+        /* ── SIDE LOG PANEL ─────────────────────────────── */
+        .log-panel {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 0;
+            min-height: 0;
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .log-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: .45rem .75rem;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .log-header-left {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .75rem;
+            color: var(--muted);
+            font-weight: 500;
+            letter-spacing: .03em;
+        }
+        .log-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: .4rem .6rem;
+            min-height: 0;
+        }
+
+        /* ── ARCH DIAGRAM PANEL ──────────────────────────── */
+        .arch-panel {
+            flex: 1 1 0;
+            min-height: 0;
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .arch-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: .35rem .75rem;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .75rem;
+            color: var(--muted);
+            font-weight: 500;
+            letter-spacing: .03em;
+            gap: .5rem;
+        }
+        .arch-tabs {
+            display: flex;
+            gap: .2rem;
+        }
+        .arch-tab {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .68rem;
+            font-weight: 500;
+            color: var(--muted);
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            padding: .2rem .5rem;
+            cursor: pointer;
+            letter-spacing: .03em;
+            transition: color .15s, border-color .15s, background .15s;
+        }
+        .arch-tab:hover { color: var(--text); border-color: var(--border); }
+        .arch-tab.active { color: var(--local-color); border-color: var(--local-color); background: color-mix(in srgb, var(--local-color) 10%, transparent); }
+        .arch-body {
+            flex: 1;
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+            padding: 0;
+            min-height: 0;
+            position: relative;
+        }
+        .arch-pane {
+            position: absolute;
+            inset: 0;
+            display: none;
+            overflow: hidden;
+        }
+        .arch-pane.active { display: flex; align-items: center; justify-content: center; }
+        #arch-pane-diagram { padding: .75rem; }
+        #arch-pane-diagram svg { width: 100%; height: 100%; }
+        #arch-pane-context, #arch-pane-calls {
+            flex-direction: column;
+            align-items: stretch;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .7rem;
+            overflow-y: auto;
+            padding: .5rem .65rem;
+            gap: .5rem;
+        }
+        .arch-debug-empty {
+            color: #3a3f52;
+            font-size: .72rem;
+            text-align: center;
+            margin: auto;
+        }
+        /* Context view */
+        .ctx-msg {
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .ctx-msg-header {
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+            padding: .25rem .5rem;
+            background: #161920;
+            border-bottom: 1px solid var(--border);
+            font-size: .68rem;
+            cursor: pointer;
+            user-select: none;
+        }
+        .ctx-msg-role {
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            font-size: .63rem;
+        }
+        .ctx-msg-role.role-user       { color: #b3c8ff; }
+        .ctx-msg-role.role-assistant  { color: var(--local-color); }
+        .ctx-msg-role.role-system     { color: var(--muted); }
+        .ctx-msg-role.role-tool       { color: var(--tool-color); }
+        .ctx-msg-body {
+            padding: .4rem .5rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+            color: var(--text);
+            line-height: 1.4;
+            max-height: 140px;
+            overflow-y: auto;
+        }
+        /* Calls view */
+        .call-entry {
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .call-entry-header {
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+            padding: .25rem .5rem;
+            background: #161920;
+            border-bottom: 1px solid var(--border);
+            font-size: .68rem;
+            cursor: pointer;
+            user-select: none;
+        }
+        .call-badge {
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            font-size: .6rem;
+            padding: .1em .35em;
+            border-radius: 3px;
+        }
+        .call-badge.req { background: color-mix(in srgb, var(--remote-color) 15%, transparent); color: var(--remote-color); border: 1px solid var(--remote-color); }
+        .call-badge.res { background: color-mix(in srgb, var(--local-color) 15%, transparent); color: var(--local-color); border: 1px solid var(--local-color); }
+        .call-entry-body {
+            padding: .4rem .5rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+            color: var(--text);
+            font-size: .67rem;
+            line-height: 1.35;
+            max-height: 160px;
+            overflow-y: auto;
+        }
+
+        /* arch node base */
+        .arch-node rect, .arch-node path {
+            transition: fill .2s, filter .2s, stroke .2s;
+        }
+        .arch-node text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            fill: var(--muted);
+            transition: fill .2s;
+            pointer-events: none;
+        }
+        .arch-node .node-sub {
+            font-size: 9px;
+            fill: #4a5060;
+        }
+
+        /* lit state — each node type uses its own color */
+        .arch-node.lit-llm rect        { fill: color-mix(in srgb, var(--remote-color) 18%, var(--code-bg)); stroke: var(--remote-color) !important; filter: drop-shadow(0 0 6px var(--remote-color)); }
+        .arch-node.lit-llm text        { fill: var(--remote-color); }
+        .arch-node.lit-agent rect { fill: color-mix(in srgb, var(--local-color) 18%, var(--code-bg)); stroke: var(--local-color) !important; filter: drop-shadow(0 0 6px var(--local-color)); }
+        .arch-node.lit-agent text { fill: var(--local-color); }
+        .arch-node.lit-pyodide rect    { fill: color-mix(in srgb, #a78bfa 18%, var(--code-bg)); stroke: #a78bfa !important; filter: drop-shadow(0 0 6px #a78bfa); }
+        .arch-node.lit-pyodide text    { fill: #a78bfa; }
+        .arch-node.lit-mcp rect        { fill: color-mix(in srgb, var(--tool-color) 18%, var(--code-bg)); stroke: var(--tool-color) !important; filter: drop-shadow(0 0 6px var(--tool-color)); }
+        .arch-node.lit-mcp text        { fill: var(--tool-color); }
+        .arch-node.lit-user rect       { fill: color-mix(in srgb, #b3c8ff 18%, var(--code-bg)); stroke: #b3c8ff !important; filter: drop-shadow(0 0 6px #b3c8ff); }
+        .arch-node.lit-user text       { fill: #b3c8ff; }
+
+        /* edge arrows */
+        .arch-edge { stroke: var(--border); stroke-width: 1.5; fill: none; marker-end: url(#arrow); transition: stroke .2s; }
+        .arch-edge.lit { stroke: var(--local-color); animation: edge-pulse 1s ease forwards; }
+        @keyframes edge-pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+
+        /* fill viewport */
+        .main-area {
+            height: calc(100vh - var(--main-top) - 2.5rem);
+        }
+        .main-area .chat-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        .main-area .chat-container .messages {
+            flex: 1;
+            min-height: 0;
+            max-height: none;
+        }
+
+        /* ── HORIZONTAL DRAG HANDLE (log ↔ arch inside right-col) ── */
+        .row-divider {
+            height: 10px;
+            flex-shrink: 0;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: row-resize;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            transition: border-color .15s, background .15s;
+        }
+        .row-divider:hover { border-color: var(--muted); background: var(--surface2); }
+        .row-divider::before {
+            content: '';
+            display: block;
+            height: 3px;
+            width: 32px;
+            border-radius: 2px;
+            background: repeating-linear-gradient(
+                to right,
+                var(--border) 0px,
+                var(--border) 3px,
+                transparent 3px,
+                transparent 6px
+            );
+        }
+
+        /* log-panel and arch-panel sizing is now driven by --vsplit-log */
+        .log-panel  { flex: 0 0 var(--vsplit-log); min-height: 80px; }
+        .arch-panel { flex: 1 1 0; min-height: 80px; }
+
+        .log-entry {
+            display: flex;
+            gap: .5rem;
+            align-items: baseline;
+            padding: .18rem 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .71rem;
+            line-height: 1.5;
+            border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+        }
+        .log-entry:last-child { border-bottom: none; }
+        .log-ts   { color: var(--muted); flex-shrink: 0; font-size: .65rem; }
+        .log-icon { flex-shrink: 0; }
+        .log-text { color: var(--text); word-break: break-word; }
+        .log-text .hl-tier-in-browser { color: var(--browser-color); font-weight: 600; }
+        .log-text .hl-tier-local      { color: var(--local-color);   font-weight: 600; }
+        .log-text .hl-tier-remote     { color: var(--remote-color);  font-weight: 600; }
+        .log-text .hl-pyodide         { color: #a78bfa;              font-weight: 600; }
+        .log-text .hl-mcp             { color: var(--tool-color);    font-weight: 600; }
+        .log-text .hl-ok              { color: var(--local-color); }
+        .log-text .hl-err             { color: #ef5350; }
+        .log-clear-btn {
+            font-size: .65rem;
+            padding: .1rem .4rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--muted);
+            cursor: pointer;
+            font-family: 'JetBrains Mono', monospace;
+            transition: border-color .15s, color .15s;
+        }
+        .log-clear-btn:hover { border-color: var(--text); color: var(--text); }
+
+        /* ── STEP MODE TOGGLE ──────────────────────────────── */
+        .step-toggle {
+            display: flex;
+            align-items: center;
+            gap: .35rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .65rem;
+            color: var(--muted);
+            cursor: pointer;
+            user-select: none;
+        }
+        .step-toggle input[type=checkbox] { display: none; }
+        .step-toggle-pill {
+            width: 28px; height: 14px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            position: relative;
+            transition: background .2s, border-color .2s;
+            flex-shrink: 0;
+        }
+        .step-toggle-pill::after {
+            content: '';
+            position: absolute;
+            top: 2px; left: 2px;
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--muted);
+            transition: transform .2s, background .2s;
+        }
+        .step-toggle input:checked ~ .step-toggle-pill {
+            background: color-mix(in srgb, #f59e0b 25%, var(--surface2));
+            border-color: #f59e0b;
+        }
+        .step-toggle input:checked ~ .step-toggle-pill::after {
+            transform: translateX(14px);
+            background: #f59e0b;
+        }
+        .step-toggle input:checked ~ .step-toggle-label { color: #f59e0b; }
+
+        /* ── STEP PAUSED BANNER ────────────────────────────── */
+        .step-paused-bar {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            padding: .4rem .75rem;
+            background: color-mix(in srgb, #f59e0b 12%, var(--code-bg));
+            border-top: 1px solid #f59e0b55;
+            flex-shrink: 0;
+            gap: .5rem;
+        }
+        .step-paused-bar.visible { display: flex; }
+        .step-paused-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .68rem;
+            color: #f59e0b;
+            flex: 1;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+        .step-next-btn {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .7rem;
+            padding: .2rem .65rem;
+            background: #f59e0b;
+            color: #0d0f14;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 700;
+            flex-shrink: 0;
+            transition: opacity .15s;
+        }
+        .step-next-btn:hover { opacity: .85; }
+        /* log entry for step events */
+        .log-entry.step-entry { background: color-mix(in srgb, #f59e0b 6%, transparent); }
+
+        /* ── ROUTING ANIMATION (on tier buttons) ──────────── */
+        .tier-btn {
+            position: relative;
+            overflow: hidden;
+        }
+        /* bottom bar that sweeps across the button when its tier is routed to */
+        .tier-btn::after {
+            content: '';
+            position: absolute;
+            left: 0; right: 0; bottom: 0;
+            height: 3px;
+            transform: translateX(-100%);
+        }
+        .tier-btn[data-tier="in-browser"]::after { background: var(--browser-color); box-shadow: 0 0 6px var(--browser-color); }
+        .tier-btn[data-tier="local"]::after      { background: var(--local-color);   box-shadow: 0 0 6px var(--local-color); }
+        .tier-btn[data-tier="remote"]::after     { background: var(--remote-color);  box-shadow: 0 0 6px var(--remote-color); }
+        .tier-btn.routed::after {
+            animation: lane-sweep .5s ease forwards;
+        }
+        .routing-keyword-chip {
+            font-size: .65rem;
+            padding: .05rem .3rem;
+            border-radius: 3px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--muted);
+            margin-left: auto;
+            transition: border-color .3s, color .3s;
+        }
+        .tier-btn.routed .routing-keyword-chip { border-color: currentColor; color: inherit; }
+        @keyframes lane-sweep {
+            from { transform: translateX(-100%); }
+            to   { transform: translateX(0); }
+        }
+
+        /* ── METRICS FOOTER ──────────────────────────────── */
+        .metrics-strip {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            padding: .35rem 1.25rem;
+            background: var(--code-bg);
+            border-top: 1px solid var(--border);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .75rem;
+            color: var(--muted);
+        }
+        /* add bottom padding to body so content doesn't hide behind footer */
+        body { padding-bottom: 2.5rem; }
+        .metric { white-space: nowrap; }
+        .metric-sep { opacity: .35; }
+        .metric-spacer { flex: 1; }
+        .cold-cache-btn {
+            padding: .2rem .55rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            color: var(--muted);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .72rem;
+            cursor: pointer;
+            transition: border-color .15s, color .15s;
+            white-space: nowrap;
+        }
+        .cold-cache-btn:hover { border-color: var(--text); color: var(--text); }
+
+        /* ── FONT SIZE CONTROLS ──────────────────────────── */
+        .font-controls {
+            display: flex;
+            align-items: center;
+            gap: .2rem;
+        }
+        .font-btn {
+            padding: .15rem .4rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--muted);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: border-color .15s, color .15s;
+            line-height: 1;
+        }
+        .font-btn:hover { border-color: var(--text); color: var(--text); }
+        .font-size-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .68rem;
+            color: var(--muted);
+            min-width: 2.4rem;
+            text-align: center;
+        }
+
+        /* ── FOCUS SNAP BUTTONS ──────────────────────────── */
+        .focus-btn {
+            padding: .15rem .5rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--muted);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .68rem;
+            cursor: pointer;
+            transition: border-color .15s, color .15s, background .15s;
+            white-space: nowrap;
+        }
+        .focus-btn:hover { border-color: var(--text); color: var(--text); }
+        .focus-btn.active-focus {
+            border-color: var(--browser-color);
+            color: var(--browser-color);
+            background: color-mix(in srgb, var(--browser-color) 10%, transparent);
+        }
+
+        /* ── PROGRESS BAR ────────────────────────────────── */
+        #progress-container {
+            margin-bottom: .75rem;
+            display: none;
+        }
+        #progress-container.visible { display: block; }
+        .progress-bar-track {
+            width: 100%;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--browser-color);
+            border-radius: 3px;
+            transition: width .3s ease;
+            width: 0%;
+        }
+        #progress-text {
+            font-size: .78rem;
+            color: var(--muted);
+            margin-top: .3rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ── CHAT ────────────────────────────────────────── */
+        .chat-container {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .messages {
+            overflow-y: auto;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: .75rem;
+        }
+        .message {
+            padding: .75rem 1rem;
+            border-radius: 8px;
+            max-width: 88%;
+            font-size: .95rem;
+        }
+        .message.user {
+            background: #1a2540;
+            border: 1px solid #233057;
+            margin-left: auto;
+            color: #b3c8ff;
+        }
+        .message.assistant {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+        }
+        .message.system {
+            background: transparent;
+            border: none;
+            font-size: .82rem;
+            color: var(--muted);
+            text-align: center;
+            max-width: 100%;
+            font-style: italic;
+        }
+        .message.tool-call-pill {
+            max-width: 100%;
+            background: #1c1700;
+            border: 1px solid #3d3000;
+        }
+        .message.tool-result {
+            max-width: 100%;
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            font-size: .83rem;
+        }
+        .message.tool-result details summary {
+            cursor: pointer;
+            color: var(--muted);
+            padding: .25rem 0;
+        }
+        .tool-result-body {
+            margin-top: .5rem;
+            white-space: pre-wrap;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .8rem;
+            color: #9da8b5;
+            overflow-x: auto;
+        }
+
+        /* route badges */
+        .route-badge {
+            display: inline-block;
+            padding: .15rem .5rem;
+            border-radius: 4px;
+            font-size: .72rem;
+            font-weight: 600;
+            margin-bottom: .4rem;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: .04em;
+            transition: box-shadow .3s;
+        }
+        .route-badge.in-browser { background: var(--browser-color); color: #000; }
+        .route-badge.browser    { background: var(--browser-color); color: #000; }
+        .route-badge.local      { background: var(--local-color);   color: #000; }
+        .route-badge.remote     { background: var(--remote-color);  color: #fff; }
+        .route-badge.hybrid     { background: var(--hybrid-color);  color: #fff; }
+        .route-badge.tool       { background: var(--tool-color);    color: #000; }
+        .route-badge.pyodide    { background: #7c3aed;              color: #fff; }
+
+        /* Glow on active (streaming) badges */
+        .message.assistant:has(.streaming-cursor) .route-badge.in-browser {
+            box-shadow: 0 0 10px var(--browser-color), 0 0 20px color-mix(in srgb, var(--browser-color) 40%, transparent);
+        }
+        .message.assistant:has(.streaming-cursor) .route-badge.local {
+            box-shadow: 0 0 10px var(--local-color), 0 0 20px color-mix(in srgb, var(--local-color) 40%, transparent);
+        }
+        .message.assistant:has(.streaming-cursor) .route-badge.remote {
+            box-shadow: 0 0 10px var(--remote-color), 0 0 20px color-mix(in srgb, var(--remote-color) 40%, transparent);
+        }
+        .message.assistant:has(.streaming-cursor) .route-badge.tool {
+            box-shadow: 0 0 10px var(--tool-color), 0 0 20px color-mix(in srgb, var(--tool-color) 40%, transparent);
+        }
+
+        /* tool call pill in message */
+        .tool-call {
+            background: #1c1700;
+            border-left: 3px solid var(--tool-color);
+            padding: .4rem .75rem;
+            margin: .4rem 0;
+            font-size: .82rem;
+            font-family: 'JetBrains Mono', monospace;
+            border-radius: 0 4px 4px 0;
+        }
+
+        /* content area — renders inline code etc */
+        .message .content code {
+            background: var(--code-bg);
+            padding: .1rem .35rem;
+            border-radius: 3px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .88em;
+        }
+        .message .content pre, .message .content code[style] {
+            display: block;
+            background: var(--code-bg);
+            border-radius: 6px;
+            padding: .75rem;
+            margin: .5rem 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .82rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+
+        /* streaming cursor */
+        .streaming-cursor {
+            display: inline-block;
+            width: 2px;
+            height: 1.1em;
+            background: var(--text);
+            vertical-align: middle;
+            margin-left: 2px;
+            animation: blink 1s step-end infinite;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* ── INPUT AREA ──────────────────────────────────── */
+        .input-area {
+            display: flex;
+            gap: .6rem;
+            padding: .9rem 1.25rem;
+            border-top: 1px solid var(--border);
+        }
+        .input-area input {
+            flex: 1;
+            padding: .65rem .9rem;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: .95rem;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+        }
+        .input-area input:focus { border-color: var(--remote-color); }
+        .input-area input::placeholder { color: var(--muted); }
+        .input-area button {
+            padding: .65rem 1.2rem;
+            background: var(--remote-color);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: .9rem;
+            font-weight: 500;
+            transition: opacity .15s;
+        }
+        .input-area button:hover { opacity: .85; }
+
+        /* ── STATUS BAR ──────────────────────────────────── */
+        .status-bar {
+            padding: .4rem 1.25rem;
+            background: var(--code-bg);
+            border-top: 1px solid var(--border);
+            min-height: 2rem;
+        }
+        @keyframes pulse { 50% { opacity: .4; } }
+
+        /* ── TRADE-OFFS DRAWER ───────────────────────────── */
+        .drawer-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.5);
+            z-index: 200;
+        }
+        .drawer-overlay.open { display: block; }
+
+        .drawer {
+            position: fixed;
+            top: 0; right: 0; bottom: 0;
+            width: min(520px, 95vw);
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            z-index: 201;
+            display: flex;
+            flex-direction: column;
+            transform: translateX(100%);
+            transition: transform .25s ease;
+            overflow: hidden;
+        }
+        .drawer.open { transform: translateX(0); }
+
+        .drawer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .drawer-header h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #fff;
+        }
+        .drawer-close {
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: .2rem .4rem;
+            border-radius: 4px;
+        }
+        .drawer-close:hover { color: var(--text); }
+
+        .drawer-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        /* comparison table */
+        .tradeoff-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: .82rem;
+        }
+        .tradeoff-table th {
+            text-align: left;
+            padding: .4rem .6rem;
+            font-weight: 600;
+            font-size: .75rem;
+            letter-spacing: .05em;
+            text-transform: uppercase;
+            color: var(--muted);
+            border-bottom: 1px solid var(--border);
+        }
+        .tradeoff-table th:not(:first-child) { text-align: center; }
+        .tradeoff-table td {
+            padding: .55rem .6rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text);
+            vertical-align: middle;
+        }
+        .tradeoff-table td:not(:first-child) { text-align: center; }
+        .tradeoff-table tr:last-child td { border-bottom: none; }
+        .tradeoff-table .row-label { color: var(--muted); font-size: .78rem; }
+
+        .pill {
+            display: inline-block;
+            padding: .1rem .45rem;
+            border-radius: 4px;
+            font-size: .72rem;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .pill.green  { background: color-mix(in srgb, var(--local-color) 20%, transparent);   color: var(--local-color); }
+        .pill.yellow { background: color-mix(in srgb, #ffc107 20%, transparent);              color: #ffc107; }
+        .pill.red    { background: color-mix(in srgb, #ef5350 20%, transparent);              color: #ef5350; }
+        .pill.blue   { background: color-mix(in srgb, var(--remote-color) 20%, transparent);  color: var(--remote-color); }
+        .pill.teal   { background: color-mix(in srgb, var(--browser-color) 20%, transparent); color: var(--browser-color); }
+
+        .drawer-section-title {
+            font-size: .72rem;
+            font-weight: 600;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: .5rem;
+        }
+        .live-metric-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: .82rem;
+            padding: .3rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .live-metric-row:last-child { border-bottom: none; }
+        .live-metric-row .lm-label { color: var(--muted); }
+        .live-metric-row .lm-value { font-family: 'JetBrains Mono', monospace; color: var(--text); }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Hybrid AI Router Demo</h1>
+        <p class="subtitle">Edge inference &amp; flexible routing · in-browser · local · remote · via PyScript</p>
+    </header>
+
+    <!-- Global tier selector -->
+    <div class="tier-selector" role="group" aria-label="Select inference tier">
+        <button class="tier-btn active" data-tier="in-browser" onclick="selectTier('in-browser')">
+            <span class="tier-dot checking" id="dot-in-browser"></span>
+            <span class="tier-label">In-browser</span>
+            <span class="tier-status" id="status-in-browser">checking…</span>
+            <span class="routing-keyword-chip" id="kw-in-browser"></span>
+        </button>
+        <button class="tier-btn" data-tier="local" onclick="selectTier('local')">
+            <span class="tier-dot checking" id="dot-local"></span>
+            <span class="tier-label">Local</span>
+            <span class="tier-status" id="status-local">checking…</span>
+            <span class="routing-keyword-chip" id="kw-local"></span>
+        </button>
+        <button class="tier-btn" data-tier="remote" onclick="selectTier('remote')">
+            <span class="tier-dot checking" id="dot-remote"></span>
+            <span class="tier-label">Remote</span>
+            <span class="tier-status" id="status-remote">checking…</span>
+            <span class="routing-keyword-chip" id="kw-remote"></span>
+        </button>
+    </div>
+
+    <!-- WebLLM progress (shown only when loading in-browser model) -->
+    <div id="progress-container">
+        <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="progress-fill"></div>
+        </div>
+        <div id="progress-text">Initializing…</div>
+    </div>
+
+    <!-- Demo buttons -->
+    <div class="demo-grid">
+        <button class="demo-btn" id="demo1" py-click="run_demo_1">
+            Demo 1: CSV Analysis
+            <small>Pandas in-browser + LLM narrative</small>
+        </button>
+        <button class="demo-btn" id="demo2" py-click="run_demo_2">
+            Demo 2: Agent + MCP Tools
+            <small>web_search → save_to_file</small>
+        </button>
+        <button class="demo-btn" id="demo3" py-click="run_demo_3">
+            Demo 3: Folder Agent
+            <small>Load agent.yaml from disk</small>
+        </button>
+    </div>
+
+    <!-- Metrics footer -->
+    <div class="metrics-strip" id="metrics-strip">
+        <span class="metric" id="metric-bundle">Bundle: —</span>
+        <span class="metric-sep">·</span>
+        <span class="metric" id="metric-coldstart">Start: —</span>
+        <span class="metric-sep">·</span>
+        <span class="metric" id="metric-ttft">TTFT: —</span>
+        <span class="metric-spacer"></span>
+        <!-- UI focus mode -->
+        <button class="focus-btn" id="focus-mode-btn" onclick="toggleUiFocus()" title="Hide/show header, tier selector and demo buttons">focus mode</button>
+        <span class="metric-sep">·</span>
+        <!-- Focus snap buttons -->
+        <button class="focus-btn" id="focus-chat-btn" onclick="snapFocus('chat')" title="Expand chat panel">◀ chat</button>
+        <button class="focus-btn" id="focus-debug-btn" onclick="snapFocus('debug')" title="Expand debug panel">debug ▶</button>
+        <button class="focus-btn" id="focus-reset-btn" onclick="snapFocus('reset')" title="Reset to 50/50 split">⊡ reset</button>
+        <span class="metric-sep">·</span>
+        <!-- Font size controls -->
+        <div class="font-controls">
+            <button class="font-btn" onclick="adjustFont(-1)" title="Decrease font size">−</button>
+            <span class="font-size-display" id="font-size-display">1.2×</span>
+            <button class="font-btn" onclick="adjustFont(+1)" title="Increase font size">+</button>
+        </div>
+        <span class="metric-sep">·</span>
+        <button class="cold-cache-btn" onclick="openDrawer()">⚖ Trade-offs</button>
+        <span class="metric-sep">·</span>
+        <button class="cold-cache-btn" onclick="clearCaches()" title="Wipe all browser caches and WebLLM model, then reload">↺ Cold reload</button>
+    </div>
+
+    <div class="main-area" id="main-area">
+        <div class="chat-container">
+            <div class="messages" id="messages">
+                <div class="message system">
+                    Select a tier above and click a demo — or type your own message below.
+                </div>
+            </div>
+            <div class="input-area">
+                <input type="text" id="user-input" placeholder="Type a message and press Enter…" py-keydown="handle_keydown">
+                <button py-click="send_message">Send</button>
+            </div>
+            <div class="status-bar">
+                <span id="local-status-text" style="font-size:.78rem;color:var(--muted);font-family:'JetBrains Mono',monospace;"></span>
+            </div>
+        </div>
+
+        <!-- Vertical drag divider (also click-toggles the panel) -->
+        <div class="col-divider" id="col-divider" title="Drag to resize · Click to toggle panel">
+            <span class="log-indicator" id="log-indicator"></span>
+        </div>
+
+        <!-- Right column: log + horizontal divider + arch diagram -->
+        <div class="right-col" id="right-col">
+
+            <!-- Log panel (top, sized by --vsplit-log) -->
+            <div class="log-panel" id="log-panel">
+                <div class="log-header">
+                    <div class="log-header-left">
+                        <span class="log-indicator" id="log-indicator-2"></span>
+                        Agent log
+                    </div>
+                    <div style="display:flex;align-items:center;gap:.6rem;">
+                        <label class="step-toggle" title="Pause at each agent boundary for step-through debugging">
+                            <input type="checkbox" id="step-mode-chk" onchange="toggleStepMode(this.checked)">
+                            <span class="step-toggle-pill"></span>
+                            <span class="step-toggle-label">step</span>
+                        </label>
+                        <button class="log-clear-btn" onclick="clearLog()">clear</button>
+                    </div>
+                </div>
+                <div class="log-body" id="log-body"></div>
+                <div class="step-paused-bar" id="step-paused-bar">
+                    <span class="step-paused-label" id="step-paused-label">⏸ paused</span>
+                    <button class="step-next-btn" onclick="stepResume()">▶ next step</button>
+                </div>
+            </div>
+
+            <!-- Horizontal drag divider (log ↔ arch) -->
+            <div class="row-divider" id="row-divider" title="Drag to resize log vs architecture panels"></div>
+
+            <!-- Architecture diagram (bottom, takes remaining space) -->
+            <div class="arch-panel">
+                <div class="arch-header">
+                    <span>Agent</span>
+                    <div class="arch-tabs">
+                        <button class="arch-tab active" onclick="archSetView('diagram')">Architecture</button>
+                        <button class="arch-tab" onclick="archSetView('context')">Context</button>
+                        <button class="arch-tab" onclick="archSetView('calls')">Calls</button>
+                    </div>
+                </div>
+                <div class="arch-body">
+                    <!-- Diagram pane -->
+                    <div id="arch-pane-diagram" class="arch-pane active">
+                    <svg viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                                <path d="M0,0 L0,6 L8,3 z" fill="#2a2d36"/>
+                            </marker>
+                            <marker id="arrow-lit" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                                <path d="M0,0 L0,6 L8,3 z" fill="#69f0ae"/>
+                            </marker>
+                        </defs>
+
+                        <!-- User -->
+                        <g class="arch-node" id="arch-user">
+                            <rect x="150" y="4" width="100" height="34" rx="6"
+                                  fill="#11131a" stroke="#2a2d36" stroke-width="1.5"/>
+                            <text x="200" y="18" text-anchor="middle" dy=".35em">User</text>
+                            <text x="200" y="30" text-anchor="middle" class="node-sub">prompt</text>
+                        </g>
+
+                        <!-- arrow: user → agent -->
+                        <line class="arch-edge" id="edge-user-orch" x1="200" y1="38" x2="200" y2="58"/>
+
+                        <!-- Agent -->
+                        <g class="arch-node" id="arch-agent">
+                            <rect x="100" y="60" width="200" height="40" rx="6"
+                                  fill="#11131a" stroke="#2a2d36" stroke-width="1.5"/>
+                            <text x="200" y="75" text-anchor="middle" dy=".35em">Agent</text>
+                            <text x="200" y="89" text-anchor="middle" class="node-sub">PyScript · agent loop</text>
+                        </g>
+
+                        <!-- arrow: agent → LLM -->
+                        <line class="arch-edge" id="edge-orch-llm" x1="148" y1="100" x2="65" y2="128"/>
+                        <!-- arrow: agent → pyscript -->
+                        <line class="arch-edge" id="edge-orch-pyodide" x1="200" y1="100" x2="200" y2="128"/>
+                        <!-- arrow: agent → mcp -->
+                        <line class="arch-edge" id="edge-orch-mcp" x1="252" y1="100" x2="335" y2="128"/>
+
+                        <!-- LLM node -->
+                        <g class="arch-node" id="arch-llm">
+                            <rect x="5" y="130" width="120" height="46" rx="6"
+                                  fill="#11131a" stroke="#2a2d36" stroke-width="1.5"/>
+                            <text x="65" y="148" text-anchor="middle" dy=".35em">LLM</text>
+                            <text x="65" y="163" text-anchor="middle" class="node-sub">browser · local · remote</text>
+                        </g>
+
+                        <!-- PyScript tool node -->
+                        <g class="arch-node" id="arch-pyodide">
+                            <rect x="140" y="130" width="120" height="46" rx="6"
+                                  fill="#11131a" stroke="#2a2d36" stroke-width="1.5"/>
+                            <text x="200" y="148" text-anchor="middle" dy=".35em">PyScript tool</text>
+                            <text x="200" y="163" text-anchor="middle" class="node-sub">analyze_csv · Pandas</text>
+                        </g>
+
+                        <!-- MCP tools node -->
+                        <g class="arch-node" id="arch-mcp">
+                            <rect x="275" y="130" width="120" height="46" rx="6"
+                                  fill="#11131a" stroke="#2a2d36" stroke-width="1.5"/>
+                            <text x="335" y="148" text-anchor="middle" dy=".35em">MCP tools</text>
+                            <text x="335" y="163" text-anchor="middle" class="node-sub">web_search · save_to_file</text>
+                        </g>
+
+                        <!-- context window dashed arc -->
+                        <path class="arch-edge" id="edge-llm-orch"
+                              d="M 65,176 Q 65,200 200,205 Q 335,200 335,176"
+                              marker-end="none" stroke-dasharray="3,3" opacity=".4"/>
+
+                        <!-- Context window label -->
+                        <rect x="110" y="198" width="180" height="18" rx="4"
+                              fill="#161920" stroke="#2a2d36" stroke-width="1"/>
+                        <text x="200" y="207" text-anchor="middle" dy=".35em"
+                              style="font-family:'JetBrains Mono',monospace;font-size:8px;fill:#3a3f52;">
+                            context window (messages[])
+                        </text>
+                    </svg>
+                    </div><!-- /arch-pane-diagram -->
+
+                    <!-- Context pane -->
+                    <div id="arch-pane-context" class="arch-pane">
+                        <div class="arch-debug-empty" id="ctx-empty">No context yet — run a demo to see messages[]</div>
+                    </div>
+
+                    <!-- Calls pane -->
+                    <div id="arch-pane-calls" class="arch-pane">
+                        <div class="arch-debug-empty" id="calls-empty">No API calls yet — run a demo to capture requests &amp; responses</div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // ── Tier selection state ─────────────────────────────
+        let _selectedTier = 'in-browser';
+
+        function getDemoTier() { return _selectedTier; }
+
+        function selectTier(tier) {
+            _selectedTier = tier;
+            document.querySelectorAll('.tier-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tier === tier);
+            });
+            // Tint demo buttons to match active tier
+            const colors = { 'in-browser': 'var(--browser-color)', 'local': 'var(--local-color)', 'remote': 'var(--remote-color)' };
+            document.querySelectorAll('.demo-btn').forEach(btn => {
+                btn.style.borderColor = colors[tier] || '';
+            });
+        }
+
+        // ── Health probes ────────────────────────────────────
+        const PROBES = {
+            'in-browser': async () => {
+                const gpu = !!navigator.gpu;
+                const cache = typeof caches !== 'undefined';
+                if (!gpu)    return { ok: false, text: 'no WebGPU' };
+                if (!cache)  return { ok: false, text: 'no Cache API' };
+                return { ok: true, text: 'WebGPU ready' };
+            },
+            'local': async () => {
+                try {
+                    const r = await fetch('http://localhost:11434/health', { signal: AbortSignal.timeout(1500) });
+                    return r.ok ? { ok: true, text: 'connected' } : { ok: false, text: `HTTP ${r.status}` };
+                } catch { return { ok: false, text: 'unreachable' }; }
+            },
+            'remote': async () => {
+                try {
+                    const r = await fetch('http://localhost:8766/health', { signal: AbortSignal.timeout(1500) });
+                    return r.ok ? { ok: true, text: 'connected' } : { ok: false, text: `HTTP ${r.status}` };
+                } catch { return { ok: false, text: 'unreachable' }; }
+            },
+        };
+
+        // MCP is not a tier button but Demo 2 needs it — probe separately and
+        // disable demo2 with a tooltip if it's unreachable.
+        async function probeMcp() {
+            try {
+                const r = await fetch('http://localhost:8765/health', { signal: AbortSignal.timeout(1500) });
+                const ok = r.ok;
+                const btn = document.getElementById('demo2');
+                if (btn) {
+                    btn.disabled = !ok;
+                    btn.title = ok ? '' : 'MCP server unreachable (port 8765)';
+                    const small = btn.querySelector('small');
+                    if (small) small.textContent = ok ? 'web_search → save_to_file' : '⚠ MCP server offline';
+                }
+            } catch {
+                const btn = document.getElementById('demo2');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.title = 'MCP server unreachable (port 8765)';
+                    const small = btn.querySelector('small');
+                    if (small) small.textContent = '⚠ MCP server offline';
+                }
+            }
+
+            // Demo 3 needs File System Access API — check and warn if unavailable
+            const demo3btn = document.getElementById('demo3');
+            if (demo3btn && !window.showDirectoryPicker) {
+                demo3btn.title = 'Requires File System Access API (Chrome/Edge)';
+                const small = demo3btn.querySelector('small');
+                if (small) small.textContent = '⚠ requires Chrome/Edge';
+            }
+        }
+
+        async function probeAll() {
+            for (const [tier, probe] of Object.entries(PROBES)) {
+                const dot    = document.getElementById(`dot-${tier}`);
+                const status = document.getElementById(`status-${tier}`);
+                const btn    = document.querySelector(`.tier-btn[data-tier="${tier}"]`);
+                try {
+                    const result = await probe();
+                    dot.className    = `tier-dot ${result.ok ? 'ready' : 'error'}`;
+                    status.textContent = result.text;
+                    // Only disable if not the currently selected tier
+                    if (!result.ok && tier !== _selectedTier) {
+                        btn.disabled = true;
+                    }
+                } catch {
+                    dot.className    = 'tier-dot error';
+                    status.textContent = 'error';
+                }
+            }
+        }
+
+        // Run probes on load, then every 15s
+        document.addEventListener('DOMContentLoaded', () => {
+            probeAll();
+            probeMcp();
+            setInterval(() => { probeAll(); probeMcp(); }, 15000);
+            selectTier(_selectedTier);
+            loadMetricsSnapshot();
+            _setMainTop();
+        });
+
+        function _setMainTop() {
+            const area = document.querySelector('.main-area');
+            if (!area) return;
+            const top = area.getBoundingClientRect().top + window.scrollY;
+            document.documentElement.style.setProperty('--main-top', top + 'px');
+        }
+
+        // ── Pre-captured metrics snapshot ────────────────────
+        async function loadMetricsSnapshot() {
+            try {
+                const r = await fetch('./metrics_snapshot.json');
+                if (!r.ok) return;
+                const s = await r.json();
+                // Pre-fill drawer TTFT rows with snapshot values (live measurements overwrite once demos run)
+                const ttft = s.ttft_ms || {};
+                const snap = document.getElementById('dm-snapshot');
+                if (snap) {
+                    snap.innerHTML =
+                        `<div class="live-metric-row"><span class="lm-label">TTFT — in-browser (snapshot)</span><span class="lm-value">${ttft.in_browser_first_token ?? '—'}ms</span></div>` +
+                        `<div class="live-metric-row"><span class="lm-label">TTFT — local (snapshot)</span><span class="lm-value">${ttft.local_first_token ?? '—'}ms</span></div>` +
+                        `<div class="live-metric-row"><span class="lm-label">TTFT — remote (snapshot)</span><span class="lm-value">${ttft.remote_first_token ?? '—'}ms</span></div>` +
+                        `<div class="live-metric-row"><span class="lm-label">Bundle total (snapshot)</span><span class="lm-value">${s.bundle?.total_mb ?? '—'} MB</span></div>` +
+                        `<div class="live-metric-row"><span class="lm-label">Cold start (snapshot)</span><span class="lm-value">${s.start_times?.cold_s ?? '—'}s</span></div>`;
+                }
+            } catch { /* snapshot optional */ }
+        }
+
+        // ── Agent log ────────────────────────────────────────
+        const LOG_ICONS = {
+            route:        '🔀',
+            tier:         '⚙️',
+            agent:        '🔄',
+            llm_start:    '🤖',
+            llm_end:      '✅',
+            tool_call:    '🔧',
+            tool_pyodide: '🐍',
+            tool_result:  '📥',
+            mcp:          '🌐',
+            agent_done:   '🏁',
+            step:         '⏸',
+            error:        '❌',
+            info:         'ℹ️',
+        };
+
+        function _logTs() {
+            const d = new Date();
+            return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}.${String(d.getMilliseconds()).padStart(3,'0')}`;
+        }
+
+        function _highlightLog(raw) {
+            // Escape HTML first so injected text can't break layout
+            const text = raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            return text
+                .replace(/\b(in-browser)\b/gi, '<span class="hl-tier-in-browser">$1</span>')
+                .replace(/\b(local)\b/gi,      '<span class="hl-tier-local">$1</span>')
+                .replace(/\b(remote)\b/gi,     '<span class="hl-tier-remote">$1</span>')
+                .replace(/\b(pyodide|analyze_csv|Pandas)\b/gi, '<span class="hl-pyodide">$1</span>')
+                .replace(/\b(mcp|web_search|save_to_file)\b/gi, '<span class="hl-mcp">$1</span>')
+                .replace(/\bHTTP (2\d\d)\b/g, 'HTTP <span class="hl-ok">$1</span>')
+                .replace(/\bHTTP ([45]\d\d)\b/g, 'HTTP <span class="hl-err">$1</span>')
+                .replace(/\b(ok|success|done|ready|complete)\b/gi,  '<span class="hl-ok">$1</span>')
+                .replace(/\b(error|failed|err|unavailable|exception)\b/gi, '<span class="hl-err">$1</span>');
+        }
+
+        function _pulseIndicators() {
+            ['log-indicator', 'log-indicator-2'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.classList.add('active');
+                clearTimeout(el._t);
+                el._t = setTimeout(() => el.classList.remove('active'), 800);
+            });
+        }
+
+        window.agentLog = (type, text) => {
+            const body = document.getElementById('log-body');
+            if (!body) return;
+
+            const entry = document.createElement('div');
+            entry.className = 'log-entry' + (type === 'step' ? ' step-entry' : '');
+            entry.innerHTML =
+                `<span class="log-ts">${_logTs()}</span>` +
+                `<span class="log-icon">${LOG_ICONS[type] || 'ℹ️'}</span>` +
+                `<span class="log-text">${_highlightLog(text)}</span>`;
+            body.appendChild(entry);
+            body.scrollTop = body.scrollHeight;
+            _pulseIndicators();
+        };
+
+        // ── Step mode ────────────────────────────────────────
+        window.agentStepMode = false;
+
+        function toggleStepMode(on) {
+            window.agentStepMode = on;
+            if (!on) {
+                // If a pause is pending, release it when the user turns off step mode
+                stepResume();
+            }
+        }
+
+        window.agentPaused = (label) => {
+            const bar   = document.getElementById('step-paused-bar');
+            const lbl   = document.getElementById('step-paused-label');
+            if (bar) bar.classList.add('visible');
+            if (lbl) lbl.textContent = `⏸  ${label}`;
+        };
+
+        function stepResume() {
+            const bar = document.getElementById('step-paused-bar');
+            if (bar) bar.classList.remove('visible');
+            // Call back into Python
+            if (window.agentResumeStep) window.agentResumeStep();
+        }
+
+        // ── Panel toggle & resize state ──────────────────────
+        let _panelOpen = false;
+
+        // Snap presets: [chatFr, rightFr] as numbers (equal = 1 each)
+        const SNAP_RESET = [1, 1];
+        const SNAP_CHAT  = [5.67, 1];   // ~85% chat
+        const SNAP_DEBUG = [1, 5.67];   // ~85% debug
+
+        function _applyColSplit(chatFr, rightFr) {
+            const root = document.documentElement;
+            root.style.setProperty('--split-chat',  `${chatFr}fr`);
+            root.style.setProperty('--split-right', `${rightFr}fr`);
+        }
+
+        function toggleLog() {
+            const area  = document.getElementById('main-area');
+            const col   = document.getElementById('right-col');
+            const div   = document.getElementById('col-divider');
+            _panelOpen  = col.classList.toggle('open');
+            div.classList.toggle('panel-active', _panelOpen);
+            area.classList.toggle('panel-open', _panelOpen);
+            document.body.classList.toggle('log-open', _panelOpen);
+            // Reset snap state when toggling
+            _applyColSplit(1, 1);
+            document.getElementById('focus-chat-btn').classList.remove('active-focus');
+            document.getElementById('focus-debug-btn').classList.remove('active-focus');
+            document.getElementById('focus-reset-btn').classList.remove('active-focus');
+        }
+
+        // ── Focus snap buttons ───────────────────────────────
+        function snapFocus(mode) {
+            if (!_panelOpen) {
+                // Open the panel first
+                toggleLog();
+            }
+            const chatBtn  = document.getElementById('focus-chat-btn');
+            const dbgBtn   = document.getElementById('focus-debug-btn');
+            const rstBtn   = document.getElementById('focus-reset-btn');
+            chatBtn.classList.remove('active-focus');
+            dbgBtn.classList.remove('active-focus');
+            rstBtn.classList.remove('active-focus');
+
+            if (mode === 'chat') {
+                _applyColSplit(...SNAP_CHAT);
+                chatBtn.classList.add('active-focus');
+            } else if (mode === 'debug') {
+                _applyColSplit(...SNAP_DEBUG);
+                dbgBtn.classList.add('active-focus');
+            } else {
+                _applyColSplit(...SNAP_RESET);
+                rstBtn.classList.add('active-focus');
+            }
+        }
+
+        // ── Vertical col-resize drag ─────────────────────────
+        (function() {
+            const divider = document.getElementById('col-divider');
+            let _dragging = false;
+            let _startX, _startChatW, _startRightW;
+            let _clickMoved = false;
+
+            divider.addEventListener('mousedown', e => {
+                if (!_panelOpen) return; // only drag when panel is open
+                _dragging = true;
+                _clickMoved = false;
+                _startX = e.clientX;
+                const area = document.getElementById('main-area');
+                const chat = document.querySelector('.chat-container');
+                const right = document.getElementById('right-col');
+                _startChatW  = chat.getBoundingClientRect().width;
+                _startRightW = right.getBoundingClientRect().width;
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', e => {
+                if (!_dragging) return;
+                const dx = e.clientX - _startX;
+                if (Math.abs(dx) > 3) _clickMoved = true;
+                const newChat  = Math.max(120, _startChatW  + dx);
+                const newRight = Math.max(120, _startRightW - dx);
+                _applyColSplit(newChat, newRight);
+                // Clear focus button active state when manually dragging
+                document.getElementById('focus-chat-btn').classList.remove('active-focus');
+                document.getElementById('focus-debug-btn').classList.remove('active-focus');
+                document.getElementById('focus-reset-btn').classList.remove('active-focus');
+            });
+
+            document.addEventListener('mouseup', e => {
+                if (!_dragging) return;
+                _dragging = false;
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                // If the mouse barely moved, treat it as a click → toggle
+                if (!_clickMoved) toggleLog();
+            });
+
+            // Double-click resets to 50/50
+            divider.addEventListener('dblclick', () => {
+                if (_panelOpen) snapFocus('reset');
+            });
+        })();
+
+        // ── Horizontal row-resize drag (log ↔ arch) ──────────
+        (function() {
+            const divider = document.getElementById('row-divider');
+            let _dragging = false;
+            let _startY, _startLogH;
+
+            divider.addEventListener('mousedown', e => {
+                _dragging = true;
+                _startY = e.clientY;
+                // getBoundingClientRect returns zoomed pixels; divide back to CSS px
+                _startLogH = document.getElementById('log-panel').getBoundingClientRect().height / _fontScale;
+                document.body.style.cursor = 'row-resize';
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', e => {
+                if (!_dragging) return;
+                // Mouse delta is in screen px; divide by zoom to get CSS px
+                const dy = (e.clientY - _startY) / _fontScale;
+                const newH = Math.max(60, _startLogH + dy);
+                document.documentElement.style.setProperty('--vsplit-log', `${newH}px`);
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (!_dragging) return;
+                _dragging = false;
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            });
+
+            // Double-click resets to 50%
+            divider.addEventListener('dblclick', () => {
+                document.documentElement.style.setProperty('--vsplit-log', '50%');
+            });
+        })();
+
+        // ── Font size controls ───────────────────────────────
+        const FONT_MIN = 0.8;
+        const FONT_MAX = 2.0;
+        const FONT_STEP = 0.1;
+        let _fontScale = 1.2;
+
+        function _applyFont(scale) {
+            _fontScale = Math.max(FONT_MIN, Math.min(FONT_MAX, scale));
+            document.documentElement.style.setProperty('--font-scale', _fontScale.toFixed(1));
+            document.getElementById('font-size-display').textContent = `${_fontScale.toFixed(1)}×`;
+        }
+
+        function adjustFont(delta) {
+            _applyFont(_fontScale + delta * FONT_STEP);
+            // Re-sync row divider position so it stays accurate after zoom change
+            const logH = document.getElementById('log-panel').getBoundingClientRect().height;
+            document.documentElement.style.setProperty('--vsplit-log', `${logH / _fontScale}px`);
+        }
+
+        // ── UI focus mode (hide header + controls) ───────────
+        let _uiFocused = false;
+        function toggleUiFocus() {
+            _uiFocused = !_uiFocused;
+            document.body.classList.toggle('ui-collapsed', _uiFocused);
+            document.getElementById('focus-mode-btn').classList.toggle('active-focus', _uiFocused);
+            // Recalculate --main-top so the main area fills correctly
+            _setMainTop();
+        }
+
+        // ── Arch diagram highlight ───────────────────────────
+        // node: 'user' | 'agent' | 'llm' | 'pyodide' | 'mcp'
+        // type: 'lit-user' | 'lit-agent' | 'lit-llm' | 'lit-pyodide' | 'lit-mcp'
+        const ARCH_LIT = {
+            user:    'lit-user',
+            agent:   'lit-agent',
+            llm:     'lit-llm',
+            pyodide: 'lit-pyodide',
+            mcp:     'lit-mcp',
+        };
+        const ARCH_EDGES = {
+            'user-agent':    'edge-user-orch',
+            'agent-llm':     'edge-orch-llm',
+            'agent-pyodide': 'edge-orch-pyodide',
+            'agent-mcp':     'edge-orch-mcp',
+        };
+        const _litTimers = {};
+
+        // Activate a node and hold it lit until agentDeactivate is called.
+        window.agentActivate = (node) => {
+            const n = String(node);
+            const el = document.getElementById(`arch-${n}`);
+
+            if (!el) return;
+            const cls = ARCH_LIT[n] || 'lit-agent';
+            clearTimeout(_litTimers[n]);
+            el.classList.add(cls);
+        };
+
+        // Remove the persistent lit state from a node.
+        window.agentDeactivate = (node) => {
+            const n = String(node);
+            const el = document.getElementById(`arch-${n}`);
+            if (!el) return;
+            const cls = ARCH_LIT[n] || 'lit-agent';
+            el.classList.remove(cls);
+        };
+
+        // Pulse an edge briefly (and optionally flash a node once).
+        window.agentHighlight = (node, edgeKey) => {
+            // Flash node only if not already held active
+            if (node && node !== 'null' && node !== 'None' && node !== '') {
+                const n = String(node);
+                const el = document.getElementById(`arch-${n}`);
+                if (el && !el.classList.contains(ARCH_LIT[n])) {
+                    const cls = ARCH_LIT[n] || 'lit-agent';
+                    el.classList.add(cls);
+                    clearTimeout(_litTimers[n]);
+                    _litTimers[n] = setTimeout(() => el.classList.remove(cls), 1800);
+                }
+            }
+            // Pulse edge
+            if (edgeKey) {
+                const ek = String(edgeKey);
+                const edgeId = ARCH_EDGES[ek];
+                const edge = edgeId && document.getElementById(edgeId);
+                if (edge) {
+                    edge.classList.add('lit');
+                    clearTimeout(_litTimers[ek]);
+                    _litTimers[ek] = setTimeout(() => edge.classList.remove('lit'), 1000);
+                }
+            }
+        };
+
+        function clearLog() {
+            document.getElementById('log-body').innerHTML = '';
+        }
+
+        // ── Arch debug panel tabs ────────────────────────────
+        let _archView = 'diagram';
+
+        function archSetView(view) {
+            _archView = view;
+            ['diagram', 'context', 'calls'].forEach(v => {
+                const pane = document.getElementById(`arch-pane-${v}`);
+                const tab  = document.querySelector(`.arch-tab[onclick="archSetView('${v}')"]`);
+                if (pane) pane.classList.toggle('active', v === view);
+                if (tab)  tab.classList.toggle('active', v === view);
+            });
+        }
+
+        // Called from Python (agent.py) after every messages[] mutation.
+        // messages: plain JS array (already converted from Python list via to_js).
+        window.archUpdateContext = (messages) => {
+            const pane = document.getElementById('arch-pane-context');
+            if (!pane) return;
+            const empty = document.getElementById('ctx-empty');
+            if (empty) empty.remove();
+
+            // Full re-render each time (messages list is small, typically <20 items)
+            pane.innerHTML = '';
+            const arr = Array.isArray(messages) ? messages : Array.from(messages);
+            arr.forEach((msg, i) => {
+                const role = msg.role || 'unknown';
+                let text = '';
+                if (typeof msg.content === 'string') {
+                    text = msg.content;
+                } else if (Array.isArray(msg.content)) {
+                    text = msg.content.map(c => c.text || JSON.stringify(c)).join('\n');
+                } else if (msg.tool_calls) {
+                    text = JSON.stringify(msg.tool_calls, null, 2);
+                } else {
+                    text = JSON.stringify(msg, null, 2);
+                }
+
+                const div = document.createElement('div');
+                div.className = 'ctx-msg';
+                const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                const preview = escaped.length > 60 ? escaped.slice(0,60).replace(/\n/g,' ') + '…' : escaped.replace(/\n/g,' ');
+                div.innerHTML =
+                    `<div class="ctx-msg-header">` +
+                    `<span class="ctx-msg-role role-${role}">${role}</span>` +
+                    `<span style="color:var(--muted);font-size:.63rem;">#${i+1} · ${escaped.length} chars</span>` +
+                    `<span style="color:#3a3f52;margin-left:auto;font-size:.63rem;">${preview}</span>` +
+                    `</div>` +
+                    `<div class="ctx-msg-body">${escaped}</div>`;
+                pane.appendChild(div);
+            });
+
+            // Auto-scroll to bottom
+            pane.scrollTop = pane.scrollHeight;
+        };
+
+        // Called from Python (tiers.py) when a request is dispatched.
+        window.archAddCall = (tier, direction, payload) => {
+            const pane = document.getElementById('arch-pane-calls');
+            if (!pane) return;
+            const empty = document.getElementById('calls-empty');
+            if (empty) empty.remove();
+
+            const ts = _logTs();
+            const isReq = direction === 'request';
+            const badgeCls = isReq ? 'req' : 'res';
+            const label = isReq ? `→ ${tier}` : `← ${tier}`;
+
+            let text = '';
+            try {
+                text = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
+            } catch { text = String(payload); }
+
+            const div = document.createElement('div');
+            div.className = 'call-entry';
+            const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            div.innerHTML =
+                `<div class="call-entry-header">` +
+                `<span class="call-badge ${badgeCls}">${direction.toUpperCase()}</span>` +
+                `<span style="color:var(--muted);">${label}</span>` +
+                `<span style="color:#3a3f52;margin-left:auto;">${ts}</span>` +
+                `</div>` +
+                `<div class="call-entry-body">${escaped}</div>`;
+            pane.appendChild(div);
+            pane.scrollTop = pane.scrollHeight;
+        };
+
+        // Clear both debug panes (called when a new demo starts).
+        window.archClearDebug = () => {
+            const ctx = document.getElementById('arch-pane-context');
+            const calls = document.getElementById('arch-pane-calls');
+            if (ctx) ctx.innerHTML = '<div class="arch-debug-empty" id="ctx-empty">No context yet — run a demo to see messages[]</div>';
+            if (calls) calls.innerHTML = '<div class="arch-debug-empty" id="calls-empty">No API calls yet — run a demo to capture requests &amp; responses</div>';
+        };
+
+        // ── Metrics strip ────────────────────────────────────
+        function updateMetrics() {
+            // Bundle size from resource timing
+            const entries = performance.getEntriesByType('resource');
+            const totalBytes = entries.reduce((sum, e) => sum + (e.transferSize || 0), 0);
+            if (totalBytes > 0) {
+                document.getElementById('metric-bundle').textContent =
+                    `Bundle: ${(totalBytes / 1024 / 1024).toFixed(1)} MB (${entries.length} resources)`;
+            }
+
+            // Cold vs warm start from navigation timing
+            const nav = performance.getEntriesByType('navigation')[0];
+            if (nav) {
+                const startMs = nav.loadEventEnd - nav.startTime;
+                const cached  = nav.transferSize === 0;
+                document.getElementById('metric-coldstart').textContent =
+                    `Start: ${(startMs / 1000).toFixed(1)}s ${cached ? '(cached)' : '(cold)'}`;
+            }
+        }
+
+        // Called by Python (via window.recordTtft) after first token arrives
+        window.recordTtft = (ms) => {
+            document.getElementById('metric-ttft').textContent = `TTFT: ${ms}ms`;
+            if (document.getElementById('tradeoffs-drawer').classList.contains('open')) {
+                document.getElementById('dm-ttft').textContent = `${ms}ms`;
+            }
+        };
+
+        // ── Trade-offs drawer ────────────────────────────────
+        function openDrawer() {
+            document.getElementById('tradeoffs-drawer').classList.add('open');
+            document.getElementById('drawer-overlay').classList.add('open');
+            syncDrawerMetrics();
+        }
+        function closeDrawer() {
+            document.getElementById('tradeoffs-drawer').classList.remove('open');
+            document.getElementById('drawer-overlay').classList.remove('open');
+        }
+        function syncDrawerMetrics() {
+            // Mirror the metrics strip values into the drawer live section
+            document.getElementById('dm-bundle').textContent =
+                document.getElementById('metric-bundle').textContent.replace('Bundle: ', '') || '—';
+            document.getElementById('dm-start').textContent =
+                document.getElementById('metric-coldstart').textContent.replace('Start: ', '') || '—';
+            document.getElementById('dm-ttft').textContent =
+                document.getElementById('metric-ttft').textContent.replace('TTFT: ', '') || '—';
+            document.getElementById('dm-webgpu').textContent =
+                !!navigator.gpu ? '✓ available' : '✗ unavailable';
+        }
+
+        // ── Cold-cache toggle ────────────────────────────────
+        async function clearCaches() {
+            const btn = document.querySelector('.cold-cache-btn');
+            btn.textContent = '↺ Clearing…';
+            btn.disabled = true;
+            try {
+                // Clear all HTTP caches
+                if (typeof caches !== 'undefined') {
+                    const keys = await caches.keys();
+                    await Promise.all(keys.map(k => caches.delete(k)));
+                }
+                // Clear WebLLM IndexedDB model cache
+                await new Promise(resolve => {
+                    const req = indexedDB.deleteDatabase('webllm/model_cache');
+                    req.onsuccess = req.onerror = resolve;
+                });
+            } finally {
+                location.reload();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Small delay so resource timing entries are all registered
+            setTimeout(updateMetrics, 1500);
+        });
+
+        // ── Routing animation ────────────────────────────────
+        window.animateRoute = (tier, keyword) => {
+            // Clear all tier buttons
+            document.querySelectorAll('.tier-btn').forEach(btn => {
+                btn.classList.remove('routed');
+                const chip = btn.querySelector('.routing-keyword-chip');
+                if (chip) chip.textContent = '';
+            });
+            // Activate the routed tier button
+            const btn = document.querySelector(`.tier-btn[data-tier="${tier}"]`);
+            if (!btn) return;
+            const chip = btn.querySelector('.routing-keyword-chip');
+            if (chip && keyword) chip.textContent = keyword;
+            // Force reflow to restart animation
+            btn.classList.remove('routed');
+            void btn.offsetWidth;
+            btn.classList.add('routed');
+        };
+
+        // ── Agent folder reader (used by Demo 3) ─────────────
+        // Returns a plain object with:
+        //   yaml         — text content of agent.yaml (empty string if missing)
+        //   documentsJson — JSON-stringified {filename: text} for files in documents/
+        //   mcpJson      — JSON-stringified content of tools/mcp.json (or "")
+        //   error        — human-readable error message (empty string on success)
+        window.readAgentFolder = async (dirHandle) => {
+            const result = { yaml: '', documentsJson: '{}', mcpJson: '', error: '' };
+            try {
+                // Read agent.yaml
+                try {
+                    const yamlHandle = await dirHandle.getFileHandle('agent.yaml');
+                    const yamlFile = await yamlHandle.getFile();
+                    result.yaml = await yamlFile.text();
+                } catch {
+                    result.error = 'agent.yaml not found in selected folder';
+                    return result;
+                }
+
+                // Read documents/ directory (flat, text files only)
+                const docs = {};
+                try {
+                    const docsHandle = await dirHandle.getDirectoryHandle('documents');
+                    for await (const [name, handle] of docsHandle.entries()) {
+                        if (handle.kind === 'file') {
+                            try {
+                                const f = await handle.getFile();
+                                docs[name] = await f.text();
+                            } catch { /* skip unreadable files */ }
+                        }
+                    }
+                } catch { /* documents/ is optional */ }
+                result.documentsJson = JSON.stringify(docs);
+
+                // Read tools/mcp.json
+                try {
+                    const toolsHandle = await dirHandle.getDirectoryHandle('tools');
+                    const mcpHandle   = await toolsHandle.getFileHandle('mcp.json');
+                    const mcpFile     = await mcpHandle.getFile();
+                    result.mcpJson    = await mcpFile.text();
+                } catch { /* tools/mcp.json is optional */ }
+
+            } catch (e) {
+                result.error = String(e);
+            }
+            return result;
+        };
+
+        // ── Progress bar visibility (driven by PyScript status updates) ──
+        const _progressObserver = new MutationObserver(() => {
+            const text = document.getElementById('local-status-text')?.textContent || '';
+            document.getElementById('progress-container')
+                ?.classList.toggle('visible', text.includes('%') || text.includes('Loading'));
+        });
+        document.addEventListener('DOMContentLoaded', () => {
+            const label = document.getElementById('local-status-text');
+            if (label) _progressObserver.observe(label, { childList: true, subtree: true, characterData: true });
+        });
+    </script>
+
+    <!-- Overlay + drawer -->
+    <div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+    <div class="drawer" id="tradeoffs-drawer">
+        <div class="drawer-header">
+            <h2>⚖ Trade-offs by Tier</h2>
+            <button class="drawer-close" onclick="closeDrawer()">✕</button>
+        </div>
+        <div class="drawer-body">
+
+            <!-- Comparison table -->
+            <div>
+                <div class="drawer-section-title">At a glance</div>
+                <table class="tradeoff-table">
+                    <thead>
+                        <tr>
+                            <th>Dimension</th>
+                            <th>In-browser</th>
+                            <th>Local</th>
+                            <th>Remote</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="row-label">Latency (TTFT)</td>
+                            <td><span class="pill yellow">~200ms</span></td>
+                            <td><span class="pill green">~80ms</span></td>
+                            <td><span class="pill blue">~11ms</span></td>
+                        </tr>
+                        <tr>
+                            <td class="row-label">Model quality</td>
+                            <td><span class="pill yellow">1–3B</span></td>
+                            <td><span class="pill yellow">7–70B</span></td>
+                            <td><span class="pill green">frontier</span></td>
+                        </tr>
+                        <tr>
+                            <td class="row-label">Tool-call quality</td>
+                            <td><span class="pill red">poor (1B)</span></td>
+                            <td><span class="pill yellow">good (8B+)</span></td>
+                            <td><span class="pill green">excellent</span></td>
+                        </tr>
+                        <tr>
+                            <td class="row-label">Privacy</td>
+                            <td><span class="pill teal">full — on device</span></td>
+                            <td><span class="pill teal">full — on device</span></td>
+                            <td><span class="pill red">data leaves device</span></td>
+                        </tr>
+                        <tr>
+                            <td class="row-label">Cost / 1k tokens</td>
+                            <td><span class="pill teal">$0 (GPU amortised)</span></td>
+                            <td><span class="pill teal">$0 (local compute)</span></td>
+                            <td><span class="pill yellow">$0.001–$0.03</span></td>
+                        </tr>
+                        <tr>
+                            <td class="row-label">Offline capable</td>
+                            <td><span class="pill green">✓ after first load</span></td>
+                            <td><span class="pill green">✓ always</span></td>
+                            <td><span class="pill red">✗ needs network</span></td>
+                        </tr>
+                        <tr>
+                            <td class="row-label">First-load cost</td>
+                            <td><span class="pill red">~700 MB model DL</span></td>
+                            <td><span class="pill yellow">model pre-installed</span></td>
+                            <td><span class="pill green">none</span></td>
+                        </tr>
+                        <tr>
+                            <td class="row-label">Requires GPU</td>
+                            <td><span class="pill yellow">WebGPU (Chrome)</span></td>
+                            <td><span class="pill green">CPU or GPU</span></td>
+                            <td><span class="pill green">no</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Live measurements -->
+            <div>
+                <div class="drawer-section-title">Live measurements (this session)</div>
+                <div class="live-metric-row">
+                    <span class="lm-label">Bundle size</span>
+                    <span class="lm-value" id="dm-bundle">—</span>
+                </div>
+                <div class="live-metric-row">
+                    <span class="lm-label">Page start time</span>
+                    <span class="lm-value" id="dm-start">—</span>
+                </div>
+                <div class="live-metric-row">
+                    <span class="lm-label">Last TTFT</span>
+                    <span class="lm-value" id="dm-ttft">—</span>
+                </div>
+                <div class="live-metric-row">
+                    <span class="lm-label">WebGPU available</span>
+                    <span class="lm-value" id="dm-webgpu">—</span>
+                </div>
+            </div>
+
+            <!-- Pre-captured snapshot -->
+            <div>
+                <div class="drawer-section-title">Snapshot measurements (pre-captured)</div>
+                <div id="dm-snapshot" style="font-size:.82rem;color:var(--muted);font-style:italic;">
+                    Loading…
+                </div>
+            </div>
+
+            <!-- When to use each tier -->
+            <div>
+                <div class="drawer-section-title">When to use each</div>
+                <div style="font-size:.82rem;display:flex;flex-direction:column;gap:.75rem;line-height:1.5;">
+                    <div>
+                        <span class="pill teal" style="margin-right:.4rem">In-browser</span>
+                        Simple, private, offline tasks. Date conversion, formatting, summarising local text. Best when data must never leave the device.
+                    </div>
+                    <div>
+                        <span class="pill green" style="margin-right:.4rem">Local</span>
+                        Moderate reasoning on local data. Code generation, document analysis, tool-calling with capable models (8B+). Privacy + quality balance.
+                    </div>
+                    <div>
+                        <span class="pill blue" style="margin-right:.4rem">Remote</span>
+                        Multi-step agents, tool-calling loops, tasks that need frontier model quality. When latency &gt; privacy and network is available.
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script type="py" src="./main.py" config="./pyscript.toml"></script>
+</body>
+</html>

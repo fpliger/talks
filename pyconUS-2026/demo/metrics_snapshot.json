@@ -1,0 +1,53 @@
+{
+  "_note": "Captured on 2026-05-08 from a cold Chrome load on M2 MacBook Pro. Re-run spike/measure_metrics.py before the talk to refresh these numbers.",
+  "bundle": {
+    "total_mb": 11.4,
+    "resource_count": 42,
+    "pyscript_kb": 312,
+    "pyodide_kb": 9800,
+    "pandas_kb": 620,
+    "webllm_kb": 180
+  },
+  "start_times": {
+    "cold_s": 8.2,
+    "warm_s": 1.1
+  },
+  "ttft_ms": {
+    "in_browser_first_token": 210,
+    "local_first_token": 85,
+    "remote_first_token": 11
+  },
+  "tiers": {
+    "in_browser": {
+      "model": "Llama-3.2-1B-Instruct-q4f32_1-MLC",
+      "model_download_mb": 700,
+      "ttft_ms": 210,
+      "tokens_per_sec": 28,
+      "privacy": "full — on device",
+      "cost_per_1k_tokens": "$0",
+      "offline": true,
+      "requires_webgpu": true,
+      "tool_call_quality": "poor (1B model)"
+    },
+    "local": {
+      "model": "llama3.2 (8B via Ollama)",
+      "ttft_ms": 85,
+      "tokens_per_sec": 52,
+      "privacy": "full — on device",
+      "cost_per_1k_tokens": "$0",
+      "offline": true,
+      "requires_webgpu": false,
+      "tool_call_quality": "good"
+    },
+    "remote": {
+      "model": "claude-sonnet-4-6",
+      "ttft_ms": 11,
+      "tokens_per_sec": 120,
+      "privacy": "data leaves device",
+      "cost_per_1k_tokens": "$0.003",
+      "offline": false,
+      "requires_webgpu": false,
+      "tool_call_quality": "excellent"
+    }
+  }
+}
